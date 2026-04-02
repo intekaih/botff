@@ -33,6 +33,32 @@ def get_gun_skin_ids(file_path):
     return gun_ids
 
 
+def request(flow: http.HTTPFlow):
+    url = flow.request.pretty_url
+    
+    # ── 0. NGĂN CHẶN LỖI SERVER KHI TRANG BỊ ĐỒ ──
+    # Thay vì để request đi lên server (và bị server trả về lỗi do không có đồ),
+    # ta chặn ngay ở Client, trả về file nhị phân Success chuẩn của Game.
+    static_maps = {
+        "ChooseSlotsAndShow": "ChooseSlotsAndShow",
+        "ChooseEmote": "ChooseEmote",
+        "ChangeClothes": "ChangeClothes"
+    }
+    
+    for endpoint, file_name in static_maps.items():
+        if endpoint in url:
+            file_path = os.path.join(_DIR, file_name)
+            if os.path.exists(file_path):
+                with open(file_path, "rb") as f:
+                    flow.response = http.Response.make(
+                        200, f.read(), {"Content-Type": "application/octet-stream"}
+                    )
+                print(f"\n[📦] Bypassed Request: {endpoint} -> Fake Success")
+            else:
+                print(f"\n[⚠️] Thiếu file tĩnh cho {endpoint}, pass-through to server")
+            return
+
+
 def response(flow: http.HTTPFlow):
     url = flow.request.pretty_url
 
