@@ -93,15 +93,19 @@ def main():
         f"{yellow}Lưu ý: Bạn cần điền UID và Access Token hợp lệ (JWT) lấy được từ tính năng Get Token.{Fore.RESET}\n"
     )
 
-    uid = input(f"{bold}Nhập Account ID (UID): {Fore.RESET}").strip()
-    if not uid:
-        print(f"{red}[!] UID không được để trống!{Fore.RESET}")
-        sys.exit(1)
+    if len(sys.argv) >= 3:
+        uid = sys.argv[1].strip()
+        token = sys.argv[2].strip()
+    else:
+        uid = input(f"{bold}Nhập Account ID (UID): {Fore.RESET}").strip()
+        if not uid:
+            print(f"{red}[!] UID không được để trống!{Fore.RESET}")
+            sys.exit(1)
 
-    token = input(f"{bold}Nhập Access Token: {Fore.RESET}").strip()
-    if not token:
-        print(f"{red}[!] Access Token không được để trống!{Fore.RESET}")
-        sys.exit(1)
+        token = input(f"{bold}Nhập Access Token: {Fore.RESET}").strip()
+        if not token:
+            print(f"{red}[!] Access Token không được để trống!{Fore.RESET}")
+            sys.exit(1)
 
     print(
         f"\n{lg}[*] Đang gửi yêu cầu trích xuất dữ liệu cho UID: {uid}...{Fore.RESET}"
