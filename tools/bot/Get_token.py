@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -19,7 +20,7 @@ yellow = Fore.YELLOW
 file_lock = threading.Lock()
 
 
-def worker(item, thread_id, region):
+def worker(item, thread_id, region, proxy_dict=None):
     try:
         if ":" not in item:
             return
@@ -28,10 +29,11 @@ def worker(item, thread_id, region):
         uid = uid.strip()
         password = password.strip()
 
-        print(f"[*] Luồng {thread_id}: Đang xử lý UID {uid}...")
+        proxy_str = proxy_dict.get("http", "Direct") if proxy_dict else "Direct"
+        print(f"[*] Luồng {thread_id}: Đang xử lý UID {uid} qua proxy {proxy_str}...")
 
         # Gọi hàm lấy token từ reg.py (Tái sử dụng code gốc mà không làm hỏng cấu trúc)
-        res = token(uid, password, region)
+        res = token(uid, password, region, proxy=proxy_dict)
 
         if res and "jwt_token" in res:
             access_token = res["jwt_token"]
@@ -69,6 +71,7 @@ if __name__ == "__main__":
     script_dir = os.path.dirname(__file__)
     data_dir = os.path.join(script_dir, "data")
     file_path = os.path.join(data_dir, "conbogay.txt")
+    proxy_path = os.path.join(data_dir, "proxies.txt")
 
     # Tạo thư mục data nếu chưa tồn tại
     if not os.path.exists(data_dir):
@@ -97,6 +100,24 @@ if __name__ == "__main__":
         f"\n{yellow}Tìm thấy {total_acc} accounts trong data/conbogay.txt.{Fore.RESET}"
     )
 
+    proxies_list = []
+    if os.path.exists(proxy_path):
+        with open(proxy_path, "r", encoding="utf-8") as f:
+            for line in f:
+                p = line.strip()
+                if p:
+                    if not p.startswith("http") and not p.startswith("socks"):
+                        p = f"http://{p}"
+                    proxies_list.append({"http": p, "https": p})
+        if proxies_list:
+            print(
+                f"{green}[+] Đã tải {len(proxies_list)} Proxy từ {proxy_path}.{Fore.RESET}"
+            )
+    else:
+        print(
+            f"{yellow}[-] Không có file Proxy ({proxy_path}). Dùng IP gốc.{Fore.RESET}"
+        )
+
     try:
         num_threads = int(input(f"Số luồng chạy cùng lúc (Khuyên dùng 5-20): "))
     except ValueError:
@@ -107,7 +128,8 @@ if __name__ == "__main__":
     # Sử dụng ThreadPool chạy đa luồng cho tốc độ cao
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         for i, acc in enumerate(accounts):
-            executor.submit(worker, acc, i + 1, region)
+            proxy_dict = random.choice(proxies_list) if proxies_list else None
+            executor.submit(worker, acc, i + 1, region, proxy_dict)
 
     print(f"\n{bold}=== HOÀN THÀNH ==={Fore.RESET}")
     print(f"{lg}Các Token hợp lệ đã được lưu nối vào file: data/access.txt{Fore.RESET}")

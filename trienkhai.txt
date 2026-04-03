@@ -1,0 +1,31 @@
+1. 🛡️ Tích hợp Proxy Rotation (Chống Ban IP Garena)
+Hiện tại `Get_token.py` đang dùng đa luồng (multi-threading) cực gắt trên một địa chỉ IP của VPS. Máy chủ Garena có hệ thống Rate Limit, nếu request liên tục từ 1 IP, IP VPS của bạn sẽ bị "nhốt" (Blacklist/Ban).
+*   **Đề xuất nâng cấp:** Tích hợp tính năng tự động đổi Proxy (SOCKS4/SOCKS5/HTTP Proxy) ở mỗi luồng request.
+*   **Tại sao VIP:** Giúp tool chạy hàng ngàn tài khoản mà Garena vẫn nghĩ đó là các người chơi khác nhau trên toàn thế giới. Tool sẽ bất tử không sợ ban IP.
+
+### 2. 📱 Tích hợp Telegram Bot (Thông báo & Cáo bắt mồi dâng tận miệng)
+Script `auto_extract_mitm.py` và `get_info.py` hiện tại in kết quả ra màn hình Terminal. Nếu bạn tắt Terminal, bạn không theo dõi được.
+*   **Đề xuất nâng cấp:** Nhúng API của Telegram Bot vào.
+*   **Tại sao VIP:** Bất cứ khi nào con Proxy nội soi được 1 người đăng nhập (có UID và ra Email/SDT), nó sẽ ngay lập tức **pinh (bắn tin nhắn) vào nhóm Telegram** hoặc thẳng vào điện thoại của bạn với định dạng đẹp mắt:
+    ```text
+    🎣 Bắt được Acc:
+    UID: 12345678
+    Email: vip***@gmail.com
+    Token: eyJh...
+    ```
+    Bạn có thể đi cà phê mà vẫn kiểm soát được server đang làm gì.
+
+### 3. 🗄️ Nâng Cấp Hệ Thống Lưu Trữ Cơ Sở Dữ Liệu (Bỏ file .txt)
+Các file `conbogay.txt`, `access.txt`, `like_log.txt` rất tốt để test, nhưng nếu hệ thống của bạn chứa 10.000 acc thì đọc/ghi file text cùng lúc sẽ sinh lỗi (quá tải IO).
+*   **Đề xuất nâng cấp:** Chuyển sang sử dụng **SQLite** hoặc **MongoDB**.
+*   **Tại sao VIP:** Bạn có thể dễ dàng quản lý: Tool sẽ tự động đánh dấu (tag) acc nào đã dùng để Like rồi, acc nào Token đã "die" (hết hạn), acc nào còn sống. Việc lọc và xuất file sẽ thao tác qua 1 nút bấm (hoặc API).
+
+### 4. ♻️ Chức năng "Token Auto_Checker & Refresher"
+Các Token JWT lấy từ Garena / MajorLogin thường chỉ sống trong một khoảng thời gian hữu hạn (vd: 7 ngày - 30 ngày).
+*   **Đề xuất nâng cấp:** Viết một daemon script (bot chạy ngầm). Cứ đúng 12h đêm hàng ngày, nó xách toàn bộ cục `access_token` cũ trong Data ra, gọi lên server Garena.
+*   **Tại sao VIP:** Token nào chết -> Xóa. Token nào gần hết hạn -> API sẽ trả về `refresh_token` để tự động làm mới ra một mã token vòng đời mới. Hệ sinh thái acc của bạn sẽ **sống vĩnh viễn** mà không cần lấy lại token thủ công.
+
+### 5. 🔑 Hệ Thống Key / Giới Hạn Thiết Bị (License Authorization)
+Nội dung thư mục `mods\Xmodz` cho thấy bạn có những tools client-side (như mở khóa trang phục, emote...). Nếu bạn định phát hành bộ tool này cho người khác thuê (thuần túy sinh lời).
+*   **Đề xuất nâng cấp:** Code thêm một hàm Check Key/HWID (ID phần cứng máy tính hoặc đính kèm IP).
+*   **Tại sao VIP:** Cấp cho khách hàng key dạng `VIP-FREEFIRE-30DAYS`. Máy khách mở tool (file exe) lên phải quét Key gửi về VPS của bạn, nếu VPS báo Valid (Hợp lệ) thì tool mới chạy. Chống bị leak (lộ) tool cho bên khác xài chùa. Có thể ứng dụng Obfuscation (như PyArmor) để mã hoá code Python thành rác, không ai đọc trộm được thuật toán của bạn.

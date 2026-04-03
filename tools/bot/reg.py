@@ -169,12 +169,12 @@ def create_acc(region):
         "Connection": "Keep-Alive"
     }
 
-    response = requests.post(url, headers=headers, data=data)
+    response = requests.post(url, headers=headers, data=data, proxies=proxy, verify=False)
     try:
         uid = response.json()['uid']
         return token(uid, password,region)
     except Exception as e:
-        return create_acc(region)
+        return create_acc(region, proxy)
 
 
 def token(uid , password , region):
@@ -199,7 +199,7 @@ def token(uid , password , region):
 
     
 
-    response = requests.post(url, headers=headers, data=body)
+    response = requests.post(url, headers=headers, data=body, proxies=proxy, verify=False)
     open_id = response.json()['open_id']
     access_token = response.json()["access_token"]
     refresh_token = response.json()['refresh_token']
@@ -207,7 +207,7 @@ def token(uid , password , region):
     result = encode_string(open_id)
     field = to_unicode_escaped(result['field_14'])
     field = codecs.decode(field, 'unicode_escape').encode('latin1')
-    return Major_Regsiter(access_token , open_id , field, uid, password,region)
+    return Major_Regsiter(access_token , open_id , field, uid, password,region, proxy)
 
 def encode_string(original):
     keystream = [
@@ -234,7 +234,7 @@ def to_unicode_escaped(s):
         for c in s
     )
 
-def Major_Regsiter(access_token , open_id , field , uid , password,region):
+def Major_Regsiter(access_token , open_id , field , uid , password,region, proxy=None):
     url = "https://loginbp.ggblueshark.com/MajorRegister"
     name = generate_random_name()
 
@@ -274,8 +274,8 @@ def Major_Regsiter(access_token , open_id , field , uid , password,region):
         "https": "socks4://",
     }
 
-    response = requests.post(url, headers=headers, data=body,verify=False)
-    return login(uid , password, access_token , open_id , response.content.hex() , response.status_code , name , region)
+    response = requests.post(url, headers=headers, data=body, proxies=proxy, verify=False)
+    return login(uid , password, access_token , open_id , response.content.hex() , response.status_code , name , region, proxy)
 
     #return {"response": response.content.hex(), "status_code" : response.status_code, "uid":uid,"password":password,"name":name}
 
@@ -303,11 +303,11 @@ def chooseregion(data_bytes, jwt_token):
         'X-GA': "v1 1",
         'ReleaseVersion': "OB52"
     }
-    response = requests.post(url, data=payload, headers=headers,verify=False)
+    response = requests.post(url, data=payload, headers=headers, proxies=proxy, verify=False)
     return response.status_code
 
 
-def login(uid , password, access_token , open_id, response , status_code , name , region):
+def login(uid , password, access_token , open_id, response , status_code , name , region, proxy=None):
     
     lang = get_region(region)
     lang_b = lang.encode("ascii")
@@ -335,7 +335,7 @@ def login(uid , password, access_token , open_id, response , status_code , name 
         URL = "https://loginbp.common.ggbluefox.com/MajorLogin"
     else:
         URL = "https://loginbp.ggblueshark.com/MajorLogin"
-    RESPONSE = requests.post(URL, headers=headers, data=Final_Payload,verify=False) 
+    RESPONSE = requests.post(URL, headers=headers, data=Final_Payload, proxies=proxy, verify=False) 
 
     
 
@@ -359,14 +359,14 @@ def login(uid , password, access_token , open_id, response , status_code , name 
 
             
             if r == 200:
-                return login_server(uid , password, access_token , open_id, response , status_code , name , region)
+                return login_server(uid , password, access_token , open_id, response , status_code , name , region, proxy)
             
         else:
             BASE64_TOKEN = RESPONSE.text[RESPONSE.text.find("eyJhbGciOiJIUzI1NiIsInN2ciI6IjEiLCJ0eXAiOiJKV1QifQ"):-1]
         second_dot_index = BASE64_TOKEN.find(".", BASE64_TOKEN.find(".") + 1)     
         time.sleep(0.2)
         BASE64_TOKEN = BASE64_TOKEN[:second_dot_index+44]
-        dat = GET_PAYLOAD_BY_DATA(BASE64_TOKEN,access_token,1,response , status_code , name , uid , password,region)
+        dat = GET_PAYLOAD_BY_DATA(BASE64_TOKEN,access_token,1,response , status_code , name , uid , password,region, proxy)
         return dat
     
 
@@ -401,7 +401,7 @@ def login_server(uid , password, access_token , open_id, response , status_code 
         URL = "https://loginbp.common.ggbluefox.com/MajorLogin"
     else:
         URL = "https://loginbp.ggblueshark.com/MajorLogin"
-    RESPONSE = requests.post(URL, headers=headers, data=Final_Payload,verify=False) 
+    RESPONSE = requests.post(URL, headers=headers, data=Final_Payload, proxies=proxy, verify=False) 
     
     if RESPONSE.status_code == 200:
         if len(RESPONSE.text) < 10:
@@ -428,7 +428,7 @@ def login_server(uid , password, access_token , open_id, response , status_code 
 
 
 import base64
-def GET_PAYLOAD_BY_DATA(JWT_TOKEN, NEW_ACCESS_TOKEN, date,response , status_code , name, uid, password, region):
+def GET_PAYLOAD_BY_DATA(JWT_TOKEN, NEW_ACCESS_TOKEN, date,response , status_code , name, uid, password, region, proxy=None):
         try:
             token_payload_base64 = JWT_TOKEN.split('.')[1]
             token_payload_base64 += '=' * ((4 - len(token_payload_base64) % 4) % 4)
@@ -448,7 +448,7 @@ def GET_PAYLOAD_BY_DATA(JWT_TOKEN, NEW_ACCESS_TOKEN, date,response , status_code
             PAYLOAD = encrypt_api(PAYLOAD)
             PAYLOAD = bytes.fromhex(PAYLOAD)
             print(JWT_TOKEN)
-            data = GET_LOGIN_DATA(JWT_TOKEN, PAYLOAD, region)
+            data = GET_LOGIN_DATA(JWT_TOKEN, PAYLOAD, region, proxy)
             print(data)
             print(uid , password)
             return {"jwt_token": JWT_TOKEN, "data":data ,"response" : response , "status_code" : status_code ,"name" : name, "uid" : uid, "password" : password}
@@ -483,7 +483,7 @@ def get_available_room(input_text):
         print(f"{red}{bold}error {e}")
         return None
 
-def GET_LOGIN_DATA(JWT_TOKEN, PAYLOAD, region):
+def GET_LOGIN_DATA(JWT_TOKEN, PAYLOAD, region, proxy=None):
     if region.lower() == "me":
         url = 'https://clientbp.ggblueshark.com/GetLoginData'
     else:
@@ -508,7 +508,7 @@ def GET_LOGIN_DATA(JWT_TOKEN, PAYLOAD, region):
 
     while attempt < max_retries:
         try:
-            response = requests.post(url, headers=headers, data=PAYLOAD,verify=False)
+            response = requests.post(url, headers=headers, data=PAYLOAD, proxies=proxy, verify=False)
             response.raise_for_status()    
             x = response.content.hex()
             json_result = get_available_room(x)
