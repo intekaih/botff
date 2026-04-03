@@ -1,15 +1,15 @@
-﻿import json
+import json
 import os
 import time
 from config import DATA_FILE
 
 # Đọc dữ liệu từ file JSON
 def load_keys():
-    if not os.path.exists(DATA_FILE):
+    if not os.path.exists(os.path.join(os.path.dirname(__file__), DATA_FILE)):
         return {}
 
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as file:
+        with open(os.path.join(os.path.dirname(__file__), DATA_FILE), "r", encoding="utf-8") as file:
             data = file.read().strip()
             return json.loads(data) if data else {}
     except json.JSONDecodeError:
@@ -17,12 +17,12 @@ def load_keys():
 
 # Lưu dữ liệu vào file JSON
 def save_keys(keys):
-    with open(DATA_FILE, "w", encoding="utf-8") as file:
+    with open(os.path.join(os.path.dirname(__file__), DATA_FILE), "w", encoding="utf-8") as file:
         json.dump(keys, file, indent=4, ensure_ascii=False)
 
 
 def lsgd( data):
-    filename = "lsgd.txt"
+    filename = os.path.join(os.path.dirname(__file__), "lsgd.txt")
     with open(filename, "a", encoding="utf-8") as file:
         file.write(json.dumps(data, ensure_ascii=False) + "\n")
 # Tạo key mới (chưa có ngày hết hạn)

@@ -130,32 +130,21 @@ def worker(thread_id):
             
             # --- LƯU UID VÀ PASS VÀO conbogay.txt ---
             with file_lock:
-                with open('conbogay.txt', 'a', encoding='utf-8') as f1:
+                with open(os.path.join(os.path.dirname(__file__), 'data', 'conbogay.txt'), 'a', encoding='utf-8') as f1:
                     f1.write(f"{uid}:{password}\n")
-            print(f"{lg}[Luồng {thread_id}] Đã lưu UID:PASS -> conbogay.txt")
+            print(f"{lg}[Luồng {thread_id}] Đã lưu UID:PASS -> data/conbogay.txt")
 
-            # Bước 2: Gọi API bên thứ 3 để lấy Access Token
-            check_url = f"https://community-ffbd.vercel.app/guest_check?uid={uid}&password={password}"
-            try:
-                # Timeout 15s để không bị treo luồng nếu API lag
-                api_res = requests.get(check_url, timeout=15, verify=False)
-                
-                if api_res.status_code == 200:
-                    data_json = api_res.json()
-                    access_token = data_json.get("access_token")
-                    
-                    if access_token:
-                        # --- LƯU ACCESS TOKEN VÀO access.txt ---
-                        with file_lock:
-                            with open('access.txt', 'a', encoding='utf-8') as f2:
-                                f2.write(f"{access_token}\n")
-                        print(f"{green}[Luồng {thread_id}] Đã lưu Token -> access.txt")
-                    else:
-                        print(f"{red}[Luồng {thread_id}] API không trả về token (Sai UID/Pass hoặc API lỗi)")
-                else:
-                    print(f"{red}[Luồng {thread_id}] Lỗi API Check: {api_res.status_code}")
-            except Exception as e_api:
-                print(f"{red}[Luồng {thread_id}] Lỗi kết nối API Vercel: {e_api}")
+            # Bước 2: Lấy trực tiếp Access Token (JWT_TOKEN) được máy chủ rander
+            access_token = res.get("jwt_token")
+            
+            if access_token:
+                # --- LƯU ACCESS TOKEN VÀO access.txt ---
+                with file_lock:
+                    with open(os.path.join(os.path.dirname(__file__), 'data', 'access.txt'), 'a', encoding='utf-8') as f2:
+                        f2.write(f"{access_token}\n")
+                print(f"{green}[Luồng {thread_id}] Đã lưu Token -> data/access.txt")
+            else:
+                print(f"{red}[Luồng {thread_id}] Không trích xuất được JWT_TOKEN")
         else:
             print(f"{red}[Luồng {thread_id}] Không lấy được UID/Pass từ Garena.")
 
@@ -462,7 +451,7 @@ def GET_PAYLOAD_BY_DATA(JWT_TOKEN, NEW_ACCESS_TOKEN, date,response , status_code
             data = GET_LOGIN_DATA(JWT_TOKEN, PAYLOAD, region)
             print(data)
             print(uid , password)
-            return {"data":data ,"response" : response , "status_code" : status_code ,"name" : name, "uid" : uid, "password" : password}
+            return {"jwt_token": JWT_TOKEN, "data":data ,"response" : response , "status_code" : status_code ,"name" : name, "uid" : uid, "password" : password}
         except Exception as e:
             print(f"{red}{bold}Error in GET_PAYLOAD_BY_DATA: {e}")
 
@@ -576,7 +565,7 @@ if __name__ == "__main__":
     
     print(f"\n=== HOÀN THÀNH ===")
     print(f"{lg}Thời gian thực hiện: {round(end_time - start_time, 2)} giây.")
-    print(f"{lg}Dữ liệu đã lưu vào conbogay.txt")
+    print(f"{lg}Dữ liệu đã lưu vào data/conbogay.txt")
 
 
 

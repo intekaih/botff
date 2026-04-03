@@ -11,7 +11,8 @@ def request(flow: http.HTTPFlow):
 
     if url in map_local:
         try:
-            with open(map_local[url], "rb") as f:
+            import os
+            with open(os.path.join(os.path.dirname(__file__), map_local[url]), "rb") as f:
                 flow.response = http.Response.make(
                     200, f.read(), {"Content-Type": "application/json"}
                 )
