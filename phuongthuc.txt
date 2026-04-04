@@ -1,0 +1,11 @@
+Phương thức 1: Dùng Mitmproxy + Cài Chứng chỉ vào Hệ thống Root (Khuyên dùng)
+Game hiện nay bảo mật mạng khá chặt chẽ, nếu cài proxy bình thường game sẽ báo lỗi mạng. Nhưng vì máy bạn đã Root, ta có thể ép chứng chỉ Mitmproxy vào hẳn lõi hệ thống (/system/etc/security/cacerts/).
+
+Ưu điểm: Bắt sóng 100% các request đăng nhập của game. Bạn mở game lên là màn hình tự động thu được chuỗi token gốc (với đầy đủ account_id...).
+Cách làm chung: Tải chứng chỉ mitmproxy-ca-cert.cer, đổi tên thành mã hash và đẩy vào thư mục hệ thống qua quyền root (ADB Root). Sau đó bật Proxy trên máy tính → Mở giả lập chơi game → Tool tự bắt được JWT.
+
+Phương thức 2: Dùng Frida để móc (Hook) thẳng vào RAM ứng dụng (Nâng cao)
+Sử dụng công cụ Frida (cần chạy 1 file frida-server bằng quyền root trên điện thoại).
+
+Ưu điểm: Không cần thiết lập mạng ngầm hay proxy lằng nhằng.
+Cách làm: Mình sẽ viết cho bạn một đoạn script Python + Frida nhỏ. Khi bạn khởi động game, script này sẽ theo sát tiến trình game trong RAM (Hook vào thư viện mạng của game hoặc Android). Khi game lấy token từ server về lưu vào RAM, Frida sẽ "chộp" lấy và tự động ném thẳng sang check_account_info.
