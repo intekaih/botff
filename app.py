@@ -5,6 +5,7 @@ import time
 import uuid
 import threading
 import socket
+import subprocess
 import queue as queue_module
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, Response, stream_with_context
@@ -22,6 +23,9 @@ app = Flask(__name__)
 
 SCHEDULER_CONFIG_FILE = os.path.join(BASE_DIR, 'scheduler_config.json')
 MITM_IDS_FILE = os.path.join(BASE_DIR, 'tools', 'mitm_scripts', 'extracted_ids.txt')
+MITM_SCRIPT = os.path.join(BASE_DIR, 'tools', 'mitm_scripts', 'auto_extract_mitm.py')
+mitm_process = None
+mitm_lock = threading.Lock()
 PROXY_FILE = os.path.join(DATA_DIR, 'proxies.txt')
 
 REGION_URLS = {
@@ -318,6 +322,47 @@ def mitm_page():
         with open(MITM_IDS_FILE, 'r', encoding='utf-8') as f:
             content = f.read()
     return render_template('mitm.html', content=content)
+
+
+@app.route('/api/mitm/status')
+def api_mitm_status():
+    global mitm_process
+    with mitm_lock:
+        running = mitm_process is not None and mitm_process.poll() is None
+    return jsonify({'running': running})
+
+
+@app.route('/api/mitm/start', methods=['POST'])
+def api_mitm_start():
+    global mitm_process
+    with mitm_lock:
+        if mitm_process is not None and mitm_process.poll() is None:
+            return jsonify({'success': False, 'msg': 'mitmproxy đang chạy rồi!'})
+        try:
+            mitm_process = subprocess.Popen(
+                ['mitmdump', '-s', MITM_SCRIPT, '--listen-port', '8080',
+                 '--set', 'ssl_insecure=true'],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                cwd=os.path.join(BASE_DIR, 'tools', 'mitm_scripts')
+            )
+            return jsonify({'success': True, 'msg': 'mitmproxy đã khởi động (port 8080)'})
+        except Exception as e:
+            return jsonify({'success': False, 'msg': str(e)})
+
+
+@app.route('/api/mitm/stop', methods=['POST'])
+def api_mitm_stop():
+    global mitm_process
+    with mitm_lock:
+        if mitm_process is None or mitm_process.poll() is not None:
+            return jsonify({'success': False, 'msg': 'mitmproxy chưa chạy'})
+        mitm_process.terminate()
+        try:
+            mitm_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            mitm_process.kill()
+        mitm_process = None
+    return jsonify({'success': True, 'msg': 'Đã dừng mitmproxy'})
 
 
 @app.route('/api/mitm/save', methods=['POST'])

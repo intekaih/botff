@@ -69,6 +69,33 @@
 <!-- TAB 1: LẤY TOKEN ACC THẬT                                -->
 <!-- ══════════════════════════════════════════════════════════ -->
 <div id="tab-extract" class="tab-content show">
+
+  <!-- CONTROL PANEL -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+      <h3>⚡ Điều khiển mitmproxy</h3>
+      <span id="mitm-badge" class="pill pill-red">🔴 Đang tắt</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px;">
+        <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.8;">
+          <div>Proxy host: <span style="color:var(--green);font-family:'Courier New',monospace;">botffkaih.replit.app</span></div>
+          <div>Proxy port: <span style="color:var(--green);font-family:'Courier New',monospace;">8080</span></div>
+          <div>Loại: <span style="color:var(--yellow)">HTTP Proxy</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" id="btn-mitm-start" onclick="startMitm()" style="min-width:140px;">
+          ▶ Bắt đầu chặn
+        </button>
+        <button class="btn btn-secondary" id="btn-mitm-stop" onclick="stopMitm()" style="min-width:120px;" disabled>
+          ⏹ Dừng lại
+        </button>
+      </div>
+    </div>
+    <div id="mitm-msg" style="margin-top:10px;font-size:0.82rem;color:var(--text-dim);display:none;"></div>
+  </div>
+
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
 
     <!-- CỘT TRÁI: Nguyên lý + Điều kiện -->
@@ -409,5 +436,71 @@ document.getElementById('ids-content').addEventListener('input', () => {
   const lines = document.getElementById('ids-content').value.split(/[\n,\s]+/).filter(s => /^\d+$/.test(s.trim()));
   document.getElementById('count-badge').textContent = lines.length + ' IDs';
 });
+
+// ── MITM Control ──────────────────────────────────────────
+function setMitmUI(running) {
+  const badge = document.getElementById('mitm-badge');
+  const btnStart = document.getElementById('btn-mitm-start');
+  const btnStop = document.getElementById('btn-mitm-stop');
+  if (!badge) return;
+  if (running) {
+    badge.className = 'pill pill-green';
+    badge.textContent = '🟢 Đang chạy';
+    btnStart.disabled = true;
+    btnStop.disabled = false;
+  } else {
+    badge.className = 'pill pill-red';
+    badge.textContent = '🔴 Đang tắt';
+    btnStart.disabled = false;
+    btnStop.disabled = true;
+  }
+}
+
+function showMitmMsg(msg, color) {
+  const el = document.getElementById('mitm-msg');
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.color = color || 'var(--text-dim)';
+  el.textContent = msg;
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+async function startMitm() {
+  document.getElementById('btn-mitm-start').innerHTML = '<span class="spinner"></span> Đang khởi động...';
+  document.getElementById('btn-mitm-start').disabled = true;
+  const res = await fetch('/api/mitm/start', {method: 'POST'});
+  const d = await res.json();
+  if (d.success) {
+    setMitmUI(true);
+    showMitmMsg('✅ ' + d.msg, 'var(--green)');
+  } else {
+    showMitmMsg('❌ ' + d.msg, '#ff6666');
+    document.getElementById('btn-mitm-start').disabled = false;
+    document.getElementById('btn-mitm-start').innerHTML = '▶ Bắt đầu chặn';
+  }
+}
+
+async function stopMitm() {
+  document.getElementById('btn-mitm-stop').innerHTML = '<span class="spinner"></span> Đang dừng...';
+  document.getElementById('btn-mitm-stop').disabled = true;
+  const res = await fetch('/api/mitm/stop', {method: 'POST'});
+  const d = await res.json();
+  setMitmUI(false);
+  showMitmMsg((d.success ? '⏹ ' : '⚠️ ') + d.msg, d.success ? 'var(--text-dim)' : '#ffaa00');
+  document.getElementById('btn-mitm-start').innerHTML = '▶ Bắt đầu chặn';
+}
+
+// Poll trạng thái mỗi 5 giây
+async function pollMitmStatus() {
+  try {
+    const r = await fetch('/api/mitm/status');
+    const d = await r.json();
+    setMitmUI(d.running);
+    const btnStart = document.getElementById('btn-mitm-start');
+    if (!d.running && btnStart) btnStart.innerHTML = '▶ Bắt đầu chặn';
+  } catch(e) {}
+}
+pollMitmStatus();
+setInterval(pollMitmStatus, 5000);
 </script>
 {% endblock %}
