@@ -463,6 +463,37 @@ def api_tokens_direct_garena():
     return jsonify({'task_id': task_id})
 
 
+@app.route('/api/tokens/account_info', methods=['POST'])
+def api_tokens_account_info():
+    """Lấy thông tin account từ token: JWT game / MSDK authToken / Garena OAuth"""
+    data = request.json or {}
+    token   = (data.get('token') or '').strip()
+    open_id = (data.get('open_id') or '').strip()
+    region  = (data.get('region') or 'VN').upper()
+
+    if not token:
+        return jsonify({'error': 'Thiếu token'}), 400
+
+    task_id, log_q = _create_task()
+    _bot_dir = os.path.join(BASE_DIR, 'tools', 'bot')
+    if _bot_dir not in sys.path:
+        sys.path.insert(0, _bot_dir)
+
+    def _run():
+        try:
+            from account_info import check_account_info
+            check_account_info(token, open_id, region, log_q=log_q)
+        except Exception as e:
+            import traceback
+            log_q.put(f'[!] Lỗi: {e}')
+            log_q.put(traceback.format_exc())
+        finally:
+            log_q.put('[DONE]')
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({'task_id': task_id})
+
+
 @app.route('/api/tokens/generate', methods=['POST'])
 def api_tokens_generate():
     data = request.json or {}

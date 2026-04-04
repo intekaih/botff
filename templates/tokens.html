@@ -243,6 +243,95 @@ adb logcat -v time > ff_log.txt
     </div>
     <div id="adb-log" class="log-box" style="display:none;margin-top:12px;min-height:80px;"></div>
   </div>
+
+  <!-- BƯỚC 5: Kiểm tra thông tin token -->
+  <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.07);padding-top:14px;">
+    <div style="color:#ff9900;font-size:0.84rem;font-weight:bold;margin-bottom:10px;">🔍 Bước 5 — Kiểm tra thông tin tài khoản từ token</div>
+
+    <!-- Tab chọn loại token -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+      <button id="info-tab-jwt" onclick="infoTab('jwt')"
+        style="padding:5px 14px;border-radius:5px;border:1px solid rgba(0,255,180,0.4);background:rgba(0,255,180,0.15);color:#00ffb4;font-size:0.78rem;cursor:pointer;">
+        🎮 Game JWT (eyJ...)
+      </button>
+      <button id="info-tab-msdk" onclick="infoTab('msdk')"
+        style="padding:5px 14px;border-radius:5px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#888;font-size:0.78rem;cursor:pointer;">
+        🔑 MSDK authToken (hex)
+      </button>
+    </div>
+
+    <!-- JWT form -->
+    <div id="info-content-jwt">
+      <div style="background:#001a1a;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:10px 14px;font-size:0.8rem;color:#99ffcc;line-height:1.9;margin-bottom:10px;">
+        <strong>Nếu có Game JWT</strong> (chuỗi dài bắt đầu bằng <code style="color:#ffcc55;">eyJ</code>):<br>
+        → Decode claims: UID, Nickname, linked type (Google/Facebook/...), external_id<br>
+        → Gọi GetPlayerPersonalShow để lấy thêm thông tin in-game
+      </div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Game JWT token</label>
+        <textarea id="info-jwt" rows="3" placeholder="Dán JWT game (eyJhbGci...) vào đây..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0;">
+          <label>open_id (tùy chọn)</label>
+          <input type="text" id="info-jwt-oid" placeholder="Để trống nếu không có">
+        </div>
+        <div class="form-group" style="width:90px;margin-bottom:0;">
+          <label>Region</label>
+          <select id="info-jwt-region">
+            {% for r in regions %}
+            <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-primary" id="btn-info-jwt" onclick="startAccountInfo('jwt')"
+          style="background:linear-gradient(135deg,#004477,#00aaff);border-color:#00aaff;color:#fff;font-weight:bold;white-space:nowrap;">
+          🔍 Lấy thông tin
+        </button>
+      </div>
+    </div>
+
+    <!-- MSDK authToken form -->
+    <div id="info-content-msdk" style="display:none;">
+      <div style="background:#1a1200;border:1px solid rgba(255,153,0,0.3);border-radius:6px;padding:10px 14px;font-size:0.8rem;color:#ffcc88;line-height:1.9;margin-bottom:10px;">
+        <strong>⚠ authToken hex (64 ký tự)</strong> là MSDK internal token — một lớp <em>trước</em> OAuth.<br>
+        → Không dùng trực tiếp với MajorLogin được<br>
+        → Cần tìm <code style="color:#ffcc55;">access_token</code> (chuỗi >100 ký tự) từ file XML khác trong SharedPrefs
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label>authToken <span style="color:#666;">(hex 64 chars)</span></label>
+          <input type="text" id="info-auth-token" value="0e76b37fc361f18d33a4498e861a80f456d456c64f4c52238c9492ce5c2d2722"
+                 style="font-size:0.72rem;">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>openId <span style="color:#666;">(hex 32 chars)</span></label>
+          <input type="text" id="info-auth-oid" value="67bbd2ecff9d5259822d9dc867050332"
+                 style="font-size:0.72rem;">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-group" style="width:90px;margin-bottom:0;">
+          <label>Region</label>
+          <select id="info-auth-region">
+            {% for r in regions %}
+            <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-primary" id="btn-info-msdk" onclick="startAccountInfo('msdk')"
+          style="background:linear-gradient(135deg,#552200,#ff6600);border-color:#ff6600;color:#fff;font-weight:bold;white-space:nowrap;">
+          🔍 Phân tích token
+        </button>
+        <button class="btn btn-secondary" onclick="copyMsdkAdbCmd()"
+          style="font-size:0.78rem;white-space:nowrap;">
+          📋 Copy lệnh ADB tìm OAuth token
+        </button>
+      </div>
+    </div>
+
+    <div id="info-log" class="log-box" style="display:none;margin-top:12px;min-height:100px;"></div>
+  </div>
 </div>
 
 <!-- LOG BOX -->
@@ -337,6 +426,82 @@ async function startAdbToken() {
     logBox.scrollTop = logBox.scrollHeight;
   };
   es.onerror = () => { es.close(); btn.disabled = false; btn.innerHTML = '🤖 Lấy JWT từ ADB Token'; };
+}
+
+function infoTab(name) {
+  ['jwt','msdk'].forEach(t => {
+    const btn  = document.getElementById('info-tab-' + t);
+    const cont = document.getElementById('info-content-' + t);
+    const on   = (t === name);
+    cont.style.display   = on ? '' : 'none';
+    btn.style.border     = on ? '1px solid rgba(0,255,180,0.4)' : '1px solid rgba(255,255,255,0.15)';
+    btn.style.background = on ? 'rgba(0,255,180,0.15)' : 'transparent';
+    btn.style.color      = on ? '#00ffb4' : '#888';
+  });
+}
+
+async function startAccountInfo(mode) {
+  let token, open_id, region, btnId;
+  if (mode === 'jwt') {
+    token   = document.getElementById('info-jwt').value.trim();
+    open_id = document.getElementById('info-jwt-oid').value.trim();
+    region  = document.getElementById('info-jwt-region').value;
+    btnId   = 'btn-info-jwt';
+    if (!token) { alert('Vui lòng dán Game JWT!'); return; }
+  } else {
+    token   = document.getElementById('info-auth-token').value.trim();
+    open_id = document.getElementById('info-auth-oid').value.trim();
+    region  = document.getElementById('info-auth-region').value;
+    btnId   = 'btn-info-msdk';
+    if (!token) { alert('Vui lòng nhập authToken!'); return; }
+  }
+
+  const btn    = document.getElementById(btnId);
+  const logBox = document.getElementById('info-log');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Đang phân tích...';
+  logBox.style.display = 'block';
+  logBox.textContent   = '[*] Đang phân tích token...\n';
+
+  try {
+    const res = await fetch('/api/tokens/account_info', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({token, open_id, region})
+    });
+    const d = await res.json();
+    if (!d.task_id) {
+      logBox.textContent += 'Lỗi: ' + JSON.stringify(d) + '\n';
+      btn.disabled = false; btn.innerHTML = '🔍 Lấy thông tin';
+      return;
+    }
+    const es = new EventSource('/api/task/' + d.task_id + '/stream');
+    es.onmessage = e => {
+      if (e.data === '[DONE]') {
+        es.close();
+        btn.disabled = false;
+        btn.innerHTML = mode === 'jwt' ? '🔍 Lấy thông tin' : '🔍 Phân tích token';
+        return;
+      }
+      if (e.data === '[PING]') return;
+      logBox.textContent += e.data + '\n';
+      logBox.scrollTop = logBox.scrollHeight;
+    };
+    es.onerror = () => {
+      es.close();
+      btn.disabled = false;
+      btn.innerHTML = mode === 'jwt' ? '🔍 Lấy thông tin' : '🔍 Phân tích token';
+    };
+  } catch(err) {
+    logBox.textContent += 'Lỗi: ' + err + '\n';
+    btn.disabled = false;
+    btn.innerHTML = mode === 'jwt' ? '🔍 Lấy thông tin' : '🔍 Phân tích token';
+  }
+}
+
+function copyMsdkAdbCmd() {
+  const cmd = `adb shell su -c "find /data/data/com.dts.freefireth/shared_prefs -name '*.xml' | xargs grep -h 'value=' | awk 'length($0)>80' | head -20"`;
+  navigator.clipboard.writeText(cmd).then(() => alert('Đã copy! Chạy lệnh này trong CMD để tìm OAuth token dài.'));
 }
 
 async function startGenerate() {
