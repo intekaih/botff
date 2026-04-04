@@ -61,132 +61,6 @@
   </div>
 </div>
 
-<!-- GOOGLE LOGIN -->
-<div class="card" style="margin-bottom:20px;border-color:rgba(66,133,244,0.4);">
-  <div class="card-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-    <h3 style="color:#4285f4;display:flex;align-items:center;gap:8px;margin:0;">
-      <svg width="20" height="20" viewBox="0 0 24 24">
-        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-      </svg>
-      Login bằng Google (không cần MITM)
-    </h3>
-    <span class="pill" style="background:rgba(66,133,244,0.15);color:#4285f4;border:1px solid rgba(66,133,244,0.3);">OAuth 2.0</span>
-    <span class="pill" style="background:rgba(255,80,80,0.12);color:#ff6666;border:1px solid rgba(255,80,80,0.3);">⚠️ Bị giới hạn bởi Garena</span>
-    {% if google_ready %}
-    <span class="pill" style="background:rgba(51,204,102,0.15);color:#33cc66;border:1px solid rgba(51,204,102,0.3);">✅ Đã cấu hình</span>
-    {% else %}
-    <span class="pill" style="background:rgba(255,170,0,0.15);color:#ffaa00;border:1px solid rgba(255,170,0,0.3);">⚙️ Chưa cài đặt</span>
-    {% endif %}
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
-    <!-- Thông tin -->
-    <div>
-      <div style="background:#1a0a0a;border:1px solid rgba(255,80,80,0.4);border-radius:6px;padding:10px 12px;font-size:0.8rem;color:#ff8888;margin-bottom:10px;line-height:1.8;">
-        <strong style="color:#ff4444;">⚠️ Giới hạn kỹ thuật:</strong> Garena verify <code>aud</code> trong Google id_token
-        phải khớp <strong>client_id của họ</strong> (trong APK) — không phải client_id của chúng ta.
-        32 variants đã test → tất cả trả về <code>invalid_request</code>.
-      </div>
-      <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.8;">
-        <strong style="color:#aaf;">Workaround:</strong> Dùng <code>account.garena.com</code><br>
-        1️⃣ Mở <a href="https://account.garena.com" target="_blank" style="color:#4285f4;">account.garena.com</a> →
-           <strong>Login with Google</strong> (cùng acc Google liên kết FF)<br>
-        2️⃣ Mở <strong>DevTools → Network</strong> → tìm request đến <code>100067.connect.garena.com</code><br>
-        3️⃣ Lấy <code>access_token</code> + <code>open_id</code> → nhập vào ô <span style="color:#ffaa00;">⚡ Nhập Garena Token</span> bên dưới
-      </div>
-    </div>
-
-    <!-- Nút login -->
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <div class="form-group" style="margin-bottom:0;">
-        <label>Region</label>
-        <select id="gg-region" style="width:100%;">
-          {% for r in regions %}
-          <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      {% if google_ready %}
-      <button class="btn btn-primary" onclick="startGoogleLogin()"
-              style="background:linear-gradient(135deg,#1a73e8,#4285f4);border-color:#4285f4;display:flex;align-items:center;justify-content:center;gap:8px;">
-        <svg width="18" height="18" viewBox="0 0 24 24">
-          <path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-          <path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        Đăng nhập bằng Google
-      </button>
-      {% else %}
-      <a href="/auth/google/start" class="btn btn-secondary"
-         style="text-align:center;border-color:rgba(66,133,244,0.4);color:#4285f4;">
-        ⚙️ Cài đặt Google OAuth
-      </a>
-      {% endif %}
-
-      <button class="btn btn-secondary" onclick="window.location='/auth/google/start'"
-              style="font-size:0.78rem;padding:6px 12px;opacity:0.7;">
-        🔧 Cấu hình lại credentials
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- DIRECT GARENA TOKEN -->
-<div class="card" style="margin-bottom:20px;border-color:rgba(255,170,0,0.4);">
-  <div class="card-header" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <h3 style="color:#ffaa00;margin:0;">⚡ Nhập Garena Token trực tiếp → JWT game</h3>
-    <span class="pill" style="background:rgba(255,170,0,0.15);color:#ffaa00;border:1px solid rgba(255,170,0,0.3);">Mọi loại acc</span>
-    <span class="pill" style="background:rgba(51,204,102,0.15);color:#33cc66;border:1px solid rgba(51,204,102,0.3);">✅ Hoạt động 100%</span>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-    <div>
-      <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.8;margin-bottom:12px;">
-        Nếu bạn đã có <strong style="color:#ffaa00;">Garena access_token</strong> + <strong style="color:#ffaa00;">open_id</strong>
-        từ bất kỳ nguồn nào (MITM, ADB, account.garena.com) → nhập thẳng vào đây.
-        Server sẽ gọi MajorLogin → lấy JWT game.
-      </div>
-      <div style="background:#1a1000;border:1px solid rgba(255,170,0,0.3);border-radius:6px;padding:10px 12px;font-size:0.79rem;color:#ffcc55;line-height:1.9;">
-        <strong>Nguồn để lấy access_token + open_id:</strong><br>
-        • <strong>account.garena.com</strong> → Login bằng Google/Facebook/Garena → DevTools → Network → tìm request đến <code>100067.connect.garena.com</code><br>
-        • <strong>MITM một lần</strong> → capture response của <code>/oauth/token/grant</code><br>
-        • <strong>Android ADB</strong> → <code>adb logcat | grep access_token</code><br>
-        • Lịch sử MITM trong <code>extracted_ids.txt</code>
-      </div>
-    </div>
-    <div>
-      <div class="form-group" style="margin-bottom:10px;">
-        <label>Garena access_token</label>
-        <textarea id="direct-access-token" rows="3" placeholder="Dán access_token tại đây..."></textarea>
-      </div>
-      <div class="form-row" style="gap:10px;">
-        <div class="form-group" style="flex:1;margin-bottom:10px;">
-          <label>Open ID</label>
-          <input type="text" id="direct-open-id" placeholder="open_id (Garena UID)">
-        </div>
-        <div class="form-group" style="width:90px;margin-bottom:10px;">
-          <label>Region</label>
-          <select id="direct-region">
-            {% for r in regions %}
-            <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <button class="btn btn-primary" id="btn-direct" onclick="startDirectToken()"
-              style="width:100%;background:linear-gradient(135deg,#cc8800,#ffaa00);border-color:#ffaa00;color:#000;font-weight:bold;">
-        ⚡ Lấy JWT từ Garena Token
-      </button>
-    </div>
-  </div>
-  <div id="direct-log" class="log-box" style="display:none;margin-top:12px;min-height:80px;"></div>
-</div>
-
 <!-- ADB EXTRACTION -->
 <div class="card" style="margin-bottom:20px;border-color:rgba(0,255,180,0.4);">
   <div class="card-header" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -208,277 +82,132 @@
     </div>
   </div>
 
-  <!-- Tab chọn phương pháp -->
-  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-    <button onclick="adbTab('root')" id="adb-tab-root"
-            style="padding:7px 16px;border-radius:6px;border:1px solid rgba(0,255,180,0.4);background:rgba(0,255,180,0.15);color:#00ffb4;font-size:0.82rem;cursor:pointer;">
-      🔑 Có Root
-    </button>
-    <button onclick="adbTab('noroot')" id="adb-tab-noroot"
-            style="padding:7px 16px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#888;font-size:0.82rem;cursor:pointer;">
-      📱 Không Root (backup)
-    </button>
-    <button onclick="adbTab('wifi')" id="adb-tab-wifi"
-            style="padding:7px 16px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#888;font-size:0.82rem;cursor:pointer;">
-      📡 ADB over WiFi
-    </button>
+  <!-- BƯỚC 0: Cài ADB -->
+  <div style="margin-bottom:14px;">
+    <div style="color:#00ffb4;font-size:0.84rem;font-weight:bold;margin-bottom:8px;">📥 Bước 0 — Cài ADB trên máy tính</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:0.79rem;">
+      <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:10px;">
+        <div style="color:#fff;font-weight:bold;margin-bottom:5px;">🪟 Windows</div>
+        <div class="log-box" style="padding:6px 8px;font-size:0.78rem;margin-bottom:4px;">winget install Google.PlatformTools</div>
+        <div style="color:#666;font-size:0.75rem;">hoặc tải <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" style="color:#4af;">platform-tools</a> từ Google</div>
+      </div>
+      <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:10px;">
+        <div style="color:#fff;font-weight:bold;margin-bottom:5px;">🍎 macOS</div>
+        <div class="log-box" style="padding:6px 8px;font-size:0.78rem;">brew install android-platform-tools</div>
+      </div>
+      <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:10px;">
+        <div style="color:#fff;font-weight:bold;margin-bottom:5px;">🐧 Linux</div>
+        <div class="log-box" style="padding:6px 8px;font-size:0.78rem;">sudo apt install adb</div>
+      </div>
+    </div>
   </div>
 
-  <!-- Nội dung tab: ROOT -->
-  <div id="adb-content-root">
-    <div style="font-size:0.82rem;color:#aaa;margin-bottom:10px;">
-      Chạy từng lệnh dưới đây trên <strong>máy tính</strong> (sau khi cài ADB):
+  <!-- BƯỚC 1: Bật USB Debug -->
+  <div style="margin-bottom:14px;">
+    <div style="color:#00ffb4;font-size:0.84rem;font-weight:bold;margin-bottom:8px;">📱 Bước 1 — Bật USB Debugging trên điện thoại</div>
+    <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:10px 14px;font-size:0.81rem;color:#ccffee;line-height:2;">
+      <strong>Cài đặt</strong> → <strong>Thông tin điện thoại</strong> → tap <strong style="color:#00ffb4;">"Số build"</strong> <strong>7 lần</strong>
+      → <strong>Tuỳ chọn nhà phát triển</strong> (Developer Options) → bật <strong style="color:#00ffb4;">USB Debugging</strong><br>
+      Cắm USB vào máy tính → Điện thoại hiện hộp thoại → chọn <strong>"Luôn cho phép"</strong>
     </div>
+  </div>
 
-    <!-- Bước 1: Cài ADB -->
-    <div style="margin-bottom:12px;">
-      <div style="color:#00ffb4;font-size:0.83rem;font-weight:bold;margin-bottom:6px;">📥 Bước 0: Cài ADB trên máy tính</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:0.79rem;">
-        <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:8px;">
-          <div style="color:#fff;margin-bottom:4px;">Windows</div>
-          <code style="color:#00ffb4;">winget install Google.PlatformTools</code>
-          <div style="color:#888;margin-top:4px;">hoặc tải <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" style="color:#4af;">platform-tools</a> từ Google</div>
-        </div>
-        <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:8px;">
-          <div style="color:#fff;margin-bottom:4px;">macOS</div>
-          <code style="color:#00ffb4;">brew install android-platform-tools</code>
-        </div>
-        <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:8px;">
-          <div style="color:#fff;margin-bottom:4px;">Linux (Ubuntu)</div>
-          <code style="color:#00ffb4;">sudo apt install adb</code>
-        </div>
+  <!-- BƯỚC 2: Kết nối -->
+  <div style="margin-bottom:14px;">
+    <div style="color:#00ffb4;font-size:0.84rem;font-weight:bold;margin-bottom:8px;">💻 Bước 2 — Kết nối & kiểm tra</div>
+    <div class="log-box" style="font-size:0.82rem;line-height:1.9;padding:12px;">adb devices
+# Kết quả đúng: dòng "xxxxxxxxxx    device"
+# Nếu "unauthorized" → xác nhận trên điện thoại</div>
+  </div>
+
+  <!-- BƯỚC 3: Extract — FF thường vs FF Max -->
+  <div style="margin-bottom:14px;">
+    <div style="color:#00ffb4;font-size:0.84rem;font-weight:bold;margin-bottom:8px;">
+      🔍 Bước 3 — Extract token
+      <span style="font-weight:normal;font-size:0.78rem;color:#aaa;margin-left:8px;">(script tự động kiểm tra cả FF thường + FF Max)</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:0.79rem;margin-bottom:8px;">
+      <div style="background:#0a1f0a;border:1px solid rgba(0,255,180,0.25);border-radius:5px;padding:7px 10px;color:#99ffcc;">
+        📦 <strong>Free Fire thường:</strong><br>
+        <code>com.dts.freefireth</code>
+      </div>
+      <div style="background:#0a1f0a;border:1px solid rgba(0,255,180,0.25);border-radius:5px;padding:7px 10px;color:#99ffcc;">
+        📦 <strong>Free Fire MAX:</strong><br>
+        <code>com.dts.freefiremax</code>
       </div>
     </div>
-
-    <!-- Bước 2: Bật USB Debug -->
-    <div style="margin-bottom:12px;">
-      <div style="color:#00ffb4;font-size:0.83rem;font-weight:bold;margin-bottom:6px;">📱 Bước 1: Bật USB Debugging trên điện thoại</div>
-      <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:10px;font-size:0.8rem;color:#ccffee;line-height:1.9;">
-        Cài đặt → Thông tin điện thoại → tap <strong>"Số build"</strong> 7 lần → <strong>Tuỳ chọn nhà phát triển</strong> → bật <strong>USB Debugging</strong>
-      </div>
-    </div>
-
-    <!-- Bước 3: Lệnh ADB -->
-    <div style="margin-bottom:12px;">
-      <div style="color:#00ffb4;font-size:0.83rem;font-weight:bold;margin-bottom:6px;">💻 Bước 2: Kết nối & kiểm tra</div>
-      <div class="log-box" style="font-size:0.82rem;line-height:1.8;padding:12px;">
-# Cắm USB vào máy tính → chạy lệnh này:
-adb devices
-# Kết quả mong đợi: "List of devices attached"
-# và dòng "xxxxxxxxxx    device"
-
-# Nếu hiện "unauthorized" → xác nhận trên điện thoại</div>
-    </div>
-
-    <!-- Bước 4: Extract token -->
-    <div style="margin-bottom:12px;">
-      <div style="color:#00ffb4;font-size:0.83rem;font-weight:bold;margin-bottom:6px;">🔍 Bước 3: Tìm token trong Free Fire (cần root)</div>
-      <div class="log-box" style="font-size:0.81rem;line-height:1.9;padding:12px;">
-# === CÁCH 1: Script tự động (copy toàn bộ, paste 1 lần) ===
+    <div class="log-box" style="font-size:0.8rem;line-height:1.85;padding:13px;">
+<span style="color:#00ffb4;"># ── Script All-in-One: tự detect FF thường + FF Max ──</span>
 adb shell su -c "
-  FF_DIR=/data/data/com.dts.freefireth
-  echo '=== SharedPreferences ==='
-  find \$FF_DIR/shared_prefs -name '*.xml' -exec grep -l 'access_token\|open_id\|session_key\|token' {} \; 2>/dev/null
-  echo '=== Nội dung files liên quan ==='
-  find \$FF_DIR/shared_prefs -name '*.xml' -exec grep -i 'access_token\|open_id\|session_key\|garena_token' {} \; 2>/dev/null
-  echo '=== Files JSON ==='
-  find \$FF_DIR/files -name '*.json' 2>/dev/null | head -10
+for PKG in com.dts.freefireth com.dts.freefiremax; do
+  DIR=/data/data/\$PKG
+  if [ -d \"\$DIR\" ]; then
+    echo \"\"
+    echo \"==== \$PKG ====\"
+    echo \"-- SharedPreferences --\"
+    find \$DIR/shared_prefs -name '*.xml' 2>/dev/null | while read f; do
+      if grep -qi 'access_token\|open_id\|garena_token\|session' \"\$f\"; then
+        echo \"[FILE] \$f\"
+        grep -i 'access_token\|open_id\|garena_token' \"\$f\" 2>/dev/null
+      fi
+    done
+    echo \"-- Files JSON --\"
+    find \$DIR/files -name '*.json' 2>/dev/null | head -5
+  else
+    echo \"\$PKG: not installed\"
+  fi
+done
 "
 
-# === CÁCH 2: Pull toàn bộ shared_prefs về máy (xem offline) ===
-adb shell su -c "cp -r /data/data/com.dts.freefireth/shared_prefs /sdcard/ff_prefs"
-adb pull /sdcard/ff_prefs ./ff_prefs_dump
-# Sau đó mở thư mục ff_prefs_dump và tìm file chứa access_token
+<span style="color:#aaa;"># ── Nếu muốn pull về máy để xem offline ──</span>
+adb shell su -c "
+  cp -r /data/data/com.dts.freefireth/shared_prefs /sdcard/ff_prefs 2>/dev/null
+  cp -r /data/data/com.dts.freefiremax/shared_prefs /sdcard/ffmax_prefs 2>/dev/null
+"
+adb pull /sdcard/ff_prefs ./ff_dump
+adb pull /sdcard/ffmax_prefs ./ffmax_dump
 
-# === CÁCH 3: Dùng logcat bắt khi game đang chạy ===
-adb logcat -s GarenaSDK:* | grep -i "access_token\|open_id\|token_grant"</div>
-    </div>
-
-    <!-- Bước 5: Giải thích kết quả -->
-    <div style="background:#001a0f;border:1px solid rgba(0,255,180,0.25);border-radius:6px;padding:12px;font-size:0.8rem;margin-bottom:12px;">
-      <div style="color:#00ffb4;font-weight:bold;margin-bottom:6px;">📋 Kết quả cần tìm:</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;color:#aaffdd;line-height:1.8;">
-        <div>
-          <code style="color:#ffcc55;">access_token</code> — chuỗi dài ~200-400 ký tự<br>
-          <code style="color:#ffcc55;">open_id</code> — dãy số (Garena UID của bạn)
-        </div>
-        <div>
-          Sau khi có 2 giá trị này → nhập vào ô<br>
-          <span style="color:#ffaa00;font-weight:bold;">⚡ Nhập Garena Token trực tiếp</span> ở trên ↑
-        </div>
-      </div>
-    </div>
+<span style="color:#aaa;"># ── Logcat: bắt token khi đang mở game (mở game trước, chạy lệnh này) ──</span>
+adb logcat -v time | grep -i "access_token\|open_id\|token_grant\|GarenaSDK"</div>
   </div>
 
-  <!-- Nội dung tab: KHÔNG ROOT -->
-  <div id="adb-content-noroot" style="display:none;">
-    <div style="background:#1a1400;border:1px solid rgba(255,170,0,0.3);border-radius:6px;padding:12px;margin-bottom:12px;font-size:0.81rem;color:#ffcc55;line-height:1.8;">
-      ⚠️ <strong>Không root:</strong> Free Fire chặn ADB backup (FLAG_ALLOW_BACKUP = false).<br>
-      Cách dưới đây chỉ hoạt động nếu điện thoại có <strong>Android 11 trở xuống</strong> và game <strong>chưa được cập nhật</strong> phòng chống backup.
-    </div>
-    <div class="log-box" style="font-size:0.81rem;line-height:1.9;padding:12px;">
-# Thử backup (có thể bị block):
-adb backup -noapk com.dts.freefireth -f ff_backup.ab
-
-# Nếu tạo được file, convert sang tar:
-dd if=ff_backup.ab bs=24 skip=1 | python3 -c "import zlib,sys; sys.stdout.buffer.write(zlib.decompress(sys.stdin.buffer.read()))" > ff_backup.tar
-tar xf ff_backup.tar
-# Tìm file shared_prefs/*.xml
-
-# === Phương án không cần root: dùng account.garena.com ===
-# Mở https://account.garena.com → Login → F12 → Network
-# Tìm request đến 100067.connect.garena.com
-# Lấy access_token + open_id từ response JSON</div>
-  </div>
-
-  <!-- Nội dung tab: WIFI -->
-  <div id="adb-content-wifi" style="display:none;">
-    <div style="font-size:0.82rem;color:#aaa;margin-bottom:10px;">
-      Kết nối ADB qua WiFi (không cần cắm USB sau lần đầu):
-    </div>
-    <div class="log-box" style="font-size:0.81rem;line-height:1.9;padding:12px;">
-# === Lần đầu: cắm USB để setup ===
-adb tcpip 5555
-adb connect [IP_ĐIỆN_THOẠI]:5555
-# Xem IP điện thoại: Cài đặt → WiFi → [tên mạng] → chi tiết
-
-# === Sau đó rút USB, dùng qua WiFi ===
-adb connect [IP_ĐIỆN_THOẠI]:5555
-adb devices
-# Chạy các lệnh extract như tab "Có Root"
-
-# === Android 11+: Wireless Debugging (không cần USB lần đầu) ===
-# Cài đặt → Tuỳ chọn nhà phát triển → Wireless debugging
-# Pair bằng mã PIN → adb pair [IP]:[PORT]</div>
-  </div>
-
-  <!-- Quick action -->
-  <div style="display:flex;align-items:center;gap:12px;margin-top:8px;padding:10px 14px;background:rgba(0,255,180,0.06);border:1px solid rgba(0,255,180,0.2);border-radius:8px;flex-wrap:wrap;">
-    <div style="font-size:0.82rem;color:#aaffdd;">
-      🎯 Sau khi lấy được <code>access_token</code> + <code>open_id</code>:
-    </div>
-    <button onclick="document.getElementById('direct-access-token').scrollIntoView({behavior:'smooth'});document.getElementById('direct-access-token').focus();"
-            style="padding:7px 16px;border-radius:6px;border:1px solid #ffaa00;background:rgba(255,170,0,0.15);color:#ffaa00;font-size:0.82rem;cursor:pointer;">
-      ↑ Nhập vào ô Garena Token trực tiếp
-    </button>
-  </div>
-</div>
-
-<!-- WEB LOGIN (KHÔNG CẦN ĐIỆN THOẠI) -->
-<div class="card" style="margin-bottom:20px;border-color:rgba(0,204,255,0.3);">
-  <div class="card-header">
-    <h3 style="color:#00ccff;">🌐 Lấy Token Acc Thật qua Web (không cần điện thoại)</h3>
-    <span class="pill" style="background:rgba(0,204,255,0.15);color:#00ccff;border:1px solid rgba(0,204,255,0.3);">iOS / Android</span>
-  </div>
-
-  <!-- BOOKMARKLET - CÁCH NHANH NHẤT -->
-  <div style="background:linear-gradient(135deg,#0d1a2d,#0a1520);border:1px solid rgba(0,204,255,0.4);border-radius:8px;padding:16px;margin-bottom:16px;">
-    <div style="color:#00ccff;font-weight:bold;font-size:0.9rem;margin-bottom:10px;">⚡ Cách nhanh nhất — Bookmarklet (1 click)</div>
-    <div style="font-size:0.81rem;color:var(--text-dim);margin-bottom:12px;line-height:1.7;">
-      Kéo nút bên dưới vào <strong style="color:#fff;">Thanh bookmark</strong> của trình duyệt.
-      Sau đó login Garena → click bookmark đó → token tự động gửi về server.
-    </div>
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+  <!-- BƯỚC 4: Paste token + Submit -->
+  <div style="margin-bottom:6px;">
+    <div style="color:#00ffb4;font-size:0.84rem;font-weight:bold;margin-bottom:8px;">✅ Bước 4 — Dán token lấy được → nhận JWT game</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div>
-        <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;">Chọn region trước:</div>
-        <select id="bm-region" onchange="updateBookmarklet()" style="width:100px;padding:4px 8px;font-size:0.82rem;">
-          {% for r in regions %}
-          <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
-          {% endfor %}
-        </select>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>Garena access_token <span style="color:#666;font-weight:normal;">(chuỗi ~200-400 ký tự)</span></label>
+          <textarea id="adb-access-token" rows="3" placeholder="Dán access_token từ kết quả ADB..."></textarea>
+        </div>
+        <div class="form-row" style="gap:10px;">
+          <div class="form-group" style="flex:1;margin-bottom:0;">
+            <label>open_id <span style="color:#666;font-weight:normal;">(dãy số)</span></label>
+            <input type="text" id="adb-open-id" placeholder="VD: 3827463910">
+          </div>
+          <div class="form-group" style="width:90px;margin-bottom:0;">
+            <label>Region</label>
+            <select id="adb-region">
+              {% for r in regions %}
+              <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
       </div>
-      <div>
-        <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;">Kéo link này vào bookmark bar:</div>
-        <a id="bookmarklet-link" href="#"
-           style="display:inline-block;padding:8px 18px;background:linear-gradient(135deg,#0044ff,#0088ff);color:#fff;border-radius:6px;font-weight:bold;font-size:0.85rem;text-decoration:none;border:2px solid rgba(0,150,255,0.5);cursor:grab;user-select:none;"
-           title="Kéo vào bookmark bar của trình duyệt">
-          🔑 BOT FF — Lấy Token
-        </a>
-      </div>
-      <div style="font-size:0.78rem;color:var(--text-dim);line-height:1.6;">
-        1. Kéo nút xanh → bookmark bar<br>
-        2. Vào <a href="https://account.garena.com" target="_blank" style="color:#99ff99;">account.garena.com</a> → login<br>
-        3. Click bookmark → done ✅
-      </div>
-    </div>
-  </div>
-
-  <!-- Hướng dẫn thủ công (thu gọn) -->
-  <details style="margin-bottom:16px;">
-  <summary style="cursor:pointer;font-size:0.82rem;color:var(--text-dim);padding:6px 10px;background:var(--bg4);border-radius:6px;user-select:none;">
-    📋 Hoặc dùng cách thủ công (copy-paste session_key)
-  </summary>
-  <div style="background:var(--bg4);border-radius:0 0 6px 6px;padding:14px;font-size:0.82rem;line-height:1.9;color:var(--text-dim);border-top:1px solid #222;">
-    <div style="color:#00ccff;font-weight:bold;margin-bottom:8px;">📋 Hướng dẫn lấy Session Key + Open ID</div>
-    <div><span style="color:var(--red);font-weight:bold;">1.</span> Mở trình duyệt → vào
-      <a href="https://account.garena.com" target="_blank" style="color:#99ff99;">https://account.garena.com</a>
-      &nbsp;<span style="opacity:0.5;font-size:0.78rem;">(hoặc <a href="https://lc.garena.com" target="_blank" style="color:#99ff99;">lc.garena.com</a>)</span>
-    </div>
-    <div><span style="color:var(--red);font-weight:bold;">2.</span> Đăng nhập bằng <strong>Google</strong> / Facebook / Garena account</div>
-    <div><span style="color:var(--red);font-weight:bold;">3.</span> Nhấn <kbd style="background:#333;border:1px solid #555;border-radius:3px;padding:1px 4px;">F12</kbd> → tab <strong>Application</strong> → <strong>Cookies</strong></div>
-    <div><span style="color:var(--red);font-weight:bold;">4.</span> Chọn domain <code style="color:#99ff99;background:#111;padding:1px 4px;border-radius:2px;">.garena.com</code> (hoặc <code style="color:#99ff99;background:#111;padding:1px 4px;border-radius:2px;">account.garena.com</code>)</div>
-    <div><span style="color:var(--red);font-weight:bold;">5.</span> Tìm <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">session_key</code> và <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">open_id</code> → copy giá trị</div>
-    <div><span style="color:var(--red);font-weight:bold;">6.</span> Dán vào ô bên dưới → bấm <strong style="color:#00ccff;">Lấy Token</strong></div>
-    <div style="margin-top:10px;padding:8px 10px;background:#0d1a0d;border:1px solid #33aa33;border-radius:4px;color:#99dd99;font-size:0.8rem;">
-      💡 <strong>Mẹo:</strong> Nếu không thấy cookie → sau khi login xong, vào
-      <code style="background:#111;padding:1px 4px;border-radius:2px;">https://account.garena.com/</code>
-      rồi mới mở F12 → Application → Cookies
-    </div>
-  </div>
-  </details>
-
-  <!-- Tabs phương án -->
-  <div style="display:flex;gap:8px;margin-bottom:12px;">
-    <button class="btn btn-secondary btn-sm" id="tab-cookie" onclick="switchWebTab('cookie')" style="border-color:#00ccff;color:#00ccff;">🍪 Cookie (session_key)</button>
-    <button class="btn btn-secondary btn-sm" id="tab-token" onclick="switchWebTab('token')" style="opacity:0.5;">🔑 Access Token trực tiếp</button>
-  </div>
-
-  <!-- Tab 1: Cookie -->
-  <div id="panel-cookie" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-    <div class="form-group" style="margin:0;">
-      <label>Session Key (cookie từ sso.garena.com)</label>
-      <input type="text" id="web-session" placeholder="Dán session_key vào đây..." style="font-size:0.78rem;">
-    </div>
-    <div class="form-group" style="margin:0;">
-      <label>Open ID (Garena UID, cookie open_id)</label>
-      <input type="text" id="web-openid" placeholder="Dán open_id vào đây...">
-    </div>
-  </div>
-
-  <!-- Tab 2: Access Token trực tiếp -->
-  <div id="panel-token" style="display:none;margin-bottom:14px;">
-    <div style="background:var(--bg4);border-radius:6px;padding:12px;margin-bottom:12px;font-size:0.81rem;color:var(--text-dim);line-height:1.8;">
-      <div style="color:#ffaa00;font-weight:bold;margin-bottom:6px;">📡 Lấy Access Token từ Network Tab</div>
-      <div>1. Vào <a href="https://account.garena.com" target="_blank" style="color:#99ff99;">account.garena.com</a> → <strong>mở F12 trước</strong> → tab <strong>Network</strong></div>
-      <div>2. Đăng nhập bằng Google (để F12 mở trong khi login)</div>
-      <div>3. Sau khi login xong → tìm request có chứa <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">access_token</code> trong Response</div>
-      <div>4. Hoặc lọc Network theo <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">garena</code> → tìm response JSON có <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">"access_token"</code></div>
-      <div>5. Copy giá trị <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">access_token</code> và <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">open_id</code> từ JSON đó</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-      <div class="form-group" style="margin:0;">
-        <label>Access Token (từ response JSON)</label>
-        <input type="text" id="web-access-token" placeholder="Dán access_token vào đây..." style="font-size:0.78rem;">
-      </div>
-      <div class="form-group" style="margin:0;">
-        <label>Open ID (từ response JSON)</label>
-        <input type="text" id="web-openid2" placeholder="Dán open_id vào đây...">
+      <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:10px;">
+        <div style="background:#001a0f;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:10px;font-size:0.79rem;color:#99ffcc;line-height:1.8;">
+          <strong>Tìm trong output ADB:</strong><br>
+          • Dòng có <code style="color:#ffcc55;">access_token</code> → copy value<br>
+          • Dòng có <code style="color:#ffcc55;">open_id</code> → copy value (số)
+        </div>
+        <button class="btn btn-primary" id="btn-adb" onclick="startAdbToken()"
+                style="background:linear-gradient(135deg,#007744,#00ffb4);border-color:#00ffb4;color:#000;font-weight:bold;">
+          🤖 Lấy JWT từ ADB Token
+        </button>
       </div>
     </div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end;">
-    <div class="form-group" style="margin:0;">
-      <label>Region</label>
-      <select id="web-region">
-        {% for r in regions %}
-        <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <button class="btn btn-primary" id="btn-web" onclick="startWebLogin()" style="white-space:nowrap;">
-      🌐 Lấy Token
-    </button>
+    <div id="adb-log" class="log-box" style="display:none;margin-top:12px;min-height:80px;"></div>
   </div>
 </div>
 
@@ -523,32 +252,20 @@ function startStream(task_id) {
   };
 }
 
-function adbTab(name) {
-  ['root','noroot','wifi'].forEach(t => {
-    const btn     = document.getElementById('adb-tab-' + t);
-    const content = document.getElementById('adb-content-' + t);
-    const active  = (t === name);
-    content.style.display = active ? '' : 'none';
-    btn.style.border      = active ? '1px solid rgba(0,255,180,0.4)' : '1px solid rgba(255,255,255,0.15)';
-    btn.style.background  = active ? 'rgba(0,255,180,0.15)' : 'transparent';
-    btn.style.color       = active ? '#00ffb4' : '#888';
-  });
-}
-
-async function startDirectToken() {
-  const access_token = document.getElementById('direct-access-token').value.trim();
-  const open_id      = document.getElementById('direct-open-id').value.trim();
-  const region       = document.getElementById('direct-region').value;
+async function startAdbToken() {
+  const access_token = document.getElementById('adb-access-token').value.trim();
+  const open_id      = document.getElementById('adb-open-id').value.trim();
+  const region       = document.getElementById('adb-region').value;
   if (!access_token || !open_id) {
-    alert('Vui lòng nhập đầy đủ access_token và open_id!');
+    alert('Vui lòng nhập access_token và open_id từ kết quả ADB!');
     return;
   }
-  const btn = document.getElementById('btn-direct');
-  const logBox = document.getElementById('direct-log');
+  const btn    = document.getElementById('btn-adb');
+  const logBox = document.getElementById('adb-log');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Đang xử lý...';
   logBox.style.display = 'block';
-  logBox.textContent = 'Đang kết nối...';
+  logBox.textContent = 'Đang kết nối MajorLogin...\n';
 
   const res = await fetch('/api/tokens/direct_garena', {
     method: 'POST',
@@ -557,28 +274,23 @@ async function startDirectToken() {
   });
   const d = await res.json();
   if (!d.task_id) {
-    logBox.textContent = 'Lỗi: ' + JSON.stringify(d);
-    btn.disabled = false; btn.innerHTML = '⚡ Lấy JWT từ Garena Token';
+    logBox.textContent += 'Lỗi: ' + JSON.stringify(d);
+    btn.disabled = false; btn.innerHTML = '🤖 Lấy JWT từ ADB Token';
     return;
   }
-  logBox.textContent = '';
   const es = new EventSource('/api/task/' + d.task_id + '/stream');
   es.onmessage = e => {
     if (e.data === '[DONE]') {
       es.close();
-      btn.disabled = false; btn.innerHTML = '⚡ Lấy JWT từ Garena Token';
+      btn.disabled = false; btn.innerHTML = '🤖 Lấy JWT từ ADB Token';
+      refreshCount();
       return;
     }
     if (e.data === '[PING]') return;
     logBox.textContent += e.data + '\n';
     logBox.scrollTop = logBox.scrollHeight;
   };
-  es.onerror = () => { es.close(); btn.disabled = false; btn.innerHTML = '⚡ Lấy JWT từ Garena Token'; };
-}
-
-function startGoogleLogin() {
-  const region = document.getElementById('gg-region').value;
-  window.location.href = '/auth/google/start?region=' + encodeURIComponent(region);
+  es.onerror = () => { es.close(); btn.disabled = false; btn.innerHTML = '🤖 Lấy JWT từ ADB Token'; };
 }
 
 async function startGenerate() {
@@ -613,68 +325,6 @@ async function startCheck() {
     body: JSON.stringify({threads: parseInt(threads)})
   });
   const {task_id} = await res.json();
-  startStream(task_id);
-}
-
-function updateBookmarklet() {
-  const region = document.getElementById('bm-region').value;
-  const server = location.origin;
-  const code = `javascript:(function(){var r='${region}',s='',o='';document.cookie.split(';').forEach(function(c){var p=c.trim().split('='),k=p[0],v=decodeURIComponent(p.slice(1).join('='));if(k==='session_key')s=v;if(k==='open_id')o=v;});if(!s||!o){alert('[BOT FF] Không tìm thấy cookie!\\nHãy đăng nhập account.garena.com rồi thử lại.');return;}if(!confirm('[BOT FF] Gửi token?\\nRegion: '+r+'\\nOpen ID: '+o))return;fetch('${server}/api/tokens/web_login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_key:s,open_id:o,region:r})}).then(function(r){return r.json();}).then(function(d){if(d.task_id)alert('[BOT FF] ✅ Đang xử lý! Mở BOT FF dashboard để xem log.');else alert('[BOT FF] ❌ Lỗi: '+JSON.stringify(d));}).catch(function(e){alert('[BOT FF] Lỗi kết nối: '+e);});})();`;
-  document.getElementById('bookmarklet-link').href = code;
-}
-document.addEventListener('DOMContentLoaded', updateBookmarklet);
-
-let webTab = 'cookie';
-
-function switchWebTab(tab) {
-  webTab = tab;
-  document.getElementById('panel-cookie').style.display = tab === 'cookie' ? 'grid' : 'none';
-  document.getElementById('panel-token').style.display  = tab === 'token'  ? 'block' : 'none';
-  document.getElementById('tab-cookie').style.opacity = tab === 'cookie' ? '1' : '0.5';
-  document.getElementById('tab-token').style.opacity  = tab === 'token'  ? '1' : '0.5';
-  document.getElementById('tab-cookie').style.borderColor = tab === 'cookie' ? '#00ccff' : '';
-  document.getElementById('tab-cookie').style.color       = tab === 'cookie' ? '#00ccff' : '';
-  document.getElementById('tab-token').style.borderColor  = tab === 'token'  ? '#ffaa00' : '';
-  document.getElementById('tab-token').style.color        = tab === 'token'  ? '#ffaa00' : '';
-}
-
-async function startWebLogin() {
-  let session_key, open_id, region;
-  region = document.getElementById('web-region').value;
-
-  if (webTab === 'cookie') {
-    session_key = document.getElementById('web-session').value.trim();
-    open_id     = document.getElementById('web-openid').value.trim();
-    if (!session_key || !open_id) {
-      appendLog('[!] Vui lòng nhập đủ Session Key và Open ID\n');
-      return;
-    }
-  } else {
-    session_key = document.getElementById('web-access-token').value.trim();
-    open_id     = document.getElementById('web-openid2').value.trim();
-    if (!session_key || !open_id) {
-      appendLog('[!] Vui lòng nhập đủ Access Token và Open ID\n');
-      return;
-    }
-  }
-
-  clearLog();
-  const btn = document.getElementById('btn-web');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Đang lấy...';
-
-  const res = await fetch('/api/tokens/web_login', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({session_key, open_id, region, direct: webTab === 'token'})
-  });
-  const {task_id, error} = await res.json();
-  if (error) {
-    appendLog('[!] ' + error + '\n');
-    btn.disabled = false;
-    btn.innerHTML = '🌐 Lấy Token';
-    return;
-  }
   startStream(task_id);
 }
 
