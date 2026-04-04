@@ -187,6 +187,183 @@
   <div id="direct-log" class="log-box" style="display:none;margin-top:12px;min-height:80px;"></div>
 </div>
 
+<!-- ADB EXTRACTION -->
+<div class="card" style="margin-bottom:20px;border-color:rgba(0,255,180,0.4);">
+  <div class="card-header" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <h3 style="color:#00ffb4;margin:0;">🤖 Lấy Token qua ADB (Android Debug Bridge)</h3>
+    <span class="pill" style="background:rgba(0,255,180,0.12);color:#00ffb4;border:1px solid rgba(0,255,180,0.3);">Android Root</span>
+    <span class="pill" style="background:rgba(0,255,180,0.12);color:#00ffb4;border:1px solid rgba(0,255,180,0.3);">Không cần MITM</span>
+  </div>
+
+  <!-- Giới thiệu -->
+  <div style="background:#001a0f;border:1px solid rgba(0,255,180,0.2);border-radius:8px;padding:14px;margin-bottom:16px;">
+    <div style="font-size:0.85rem;color:#aaffdd;line-height:1.9;">
+      <strong style="color:#00ffb4;">ADB là gì?</strong> Android Debug Bridge — công cụ của Google để kết nối máy tính với điện thoại Android qua USB/WiFi.<br>
+      Với điện thoại <strong style="color:#fff;">đã root</strong>, ADB cho phép đọc thẳng thư mục ứng dụng Free Fire → lấy token lưu trong bộ nhớ mà không cần chặn mạng.
+    </div>
+    <div style="display:flex;gap:20px;margin-top:10px;flex-wrap:wrap;font-size:0.8rem;">
+      <div style="color:#66ffcc;">✅ Hoạt động với mọi loại tài khoản (Google, Facebook, Garena)</div>
+      <div style="color:#66ffcc;">✅ Không cần certificate MITM</div>
+      <div style="color:#ffaa55;">⚠️ Yêu cầu điện thoại đã root + bật USB Debugging</div>
+    </div>
+  </div>
+
+  <!-- Tab chọn phương pháp -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+    <button onclick="adbTab('root')" id="adb-tab-root"
+            style="padding:7px 16px;border-radius:6px;border:1px solid rgba(0,255,180,0.4);background:rgba(0,255,180,0.15);color:#00ffb4;font-size:0.82rem;cursor:pointer;">
+      🔑 Có Root
+    </button>
+    <button onclick="adbTab('noroot')" id="adb-tab-noroot"
+            style="padding:7px 16px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#888;font-size:0.82rem;cursor:pointer;">
+      📱 Không Root (backup)
+    </button>
+    <button onclick="adbTab('wifi')" id="adb-tab-wifi"
+            style="padding:7px 16px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#888;font-size:0.82rem;cursor:pointer;">
+      📡 ADB over WiFi
+    </button>
+  </div>
+
+  <!-- Nội dung tab: ROOT -->
+  <div id="adb-content-root">
+    <div style="font-size:0.82rem;color:#aaa;margin-bottom:10px;">
+      Chạy từng lệnh dưới đây trên <strong>máy tính</strong> (sau khi cài ADB):
+    </div>
+
+    <!-- Bước 1: Cài ADB -->
+    <div style="margin-bottom:12px;">
+      <div style="color:#00ffb4;font-size:0.83rem;font-weight:bold;margin-bottom:6px;">📥 Bước 0: Cài ADB trên máy tính</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:0.79rem;">
+        <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:8px;">
+          <div style="color:#fff;margin-bottom:4px;">Windows</div>
+          <code style="color:#00ffb4;">winget install Google.PlatformTools</code>
+          <div style="color:#888;margin-top:4px;">hoặc tải <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" style="color:#4af;">platform-tools</a> từ Google</div>
+        </div>
+        <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:8px;">
+          <div style="color:#fff;margin-bottom:4px;">macOS</div>
+          <code style="color:#00ffb4;">brew install android-platform-tools</code>
+        </div>
+        <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:8px;">
+          <div style="color:#fff;margin-bottom:4px;">Linux (Ubuntu)</div>
+          <code style="color:#00ffb4;">sudo apt install adb</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bước 2: Bật USB Debug -->
+    <div style="margin-bottom:12px;">
+      <div style="color:#00ffb4;font-size:0.83rem;font-weight:bold;margin-bottom:6px;">📱 Bước 1: Bật USB Debugging trên điện thoại</div>
+      <div style="background:#0d1a0d;border:1px solid rgba(0,255,180,0.2);border-radius:6px;padding:10px;font-size:0.8rem;color:#ccffee;line-height:1.9;">
+        Cài đặt → Thông tin điện thoại → tap <strong>"Số build"</strong> 7 lần → <strong>Tuỳ chọn nhà phát triển</strong> → bật <strong>USB Debugging</strong>
+      </div>
+    </div>
+
+    <!-- Bước 3: Lệnh ADB -->
+    <div style="margin-bottom:12px;">
+      <div style="color:#00ffb4;font-size:0.83rem;font-weight:bold;margin-bottom:6px;">💻 Bước 2: Kết nối & kiểm tra</div>
+      <div class="log-box" style="font-size:0.82rem;line-height:1.8;padding:12px;">
+# Cắm USB vào máy tính → chạy lệnh này:
+adb devices
+# Kết quả mong đợi: "List of devices attached"
+# và dòng "xxxxxxxxxx    device"
+
+# Nếu hiện "unauthorized" → xác nhận trên điện thoại</div>
+    </div>
+
+    <!-- Bước 4: Extract token -->
+    <div style="margin-bottom:12px;">
+      <div style="color:#00ffb4;font-size:0.83rem;font-weight:bold;margin-bottom:6px;">🔍 Bước 3: Tìm token trong Free Fire (cần root)</div>
+      <div class="log-box" style="font-size:0.81rem;line-height:1.9;padding:12px;">
+# === CÁCH 1: Script tự động (copy toàn bộ, paste 1 lần) ===
+adb shell su -c "
+  FF_DIR=/data/data/com.dts.freefireth
+  echo '=== SharedPreferences ==='
+  find \$FF_DIR/shared_prefs -name '*.xml' -exec grep -l 'access_token\|open_id\|session_key\|token' {} \; 2>/dev/null
+  echo '=== Nội dung files liên quan ==='
+  find \$FF_DIR/shared_prefs -name '*.xml' -exec grep -i 'access_token\|open_id\|session_key\|garena_token' {} \; 2>/dev/null
+  echo '=== Files JSON ==='
+  find \$FF_DIR/files -name '*.json' 2>/dev/null | head -10
+"
+
+# === CÁCH 2: Pull toàn bộ shared_prefs về máy (xem offline) ===
+adb shell su -c "cp -r /data/data/com.dts.freefireth/shared_prefs /sdcard/ff_prefs"
+adb pull /sdcard/ff_prefs ./ff_prefs_dump
+# Sau đó mở thư mục ff_prefs_dump và tìm file chứa access_token
+
+# === CÁCH 3: Dùng logcat bắt khi game đang chạy ===
+adb logcat -s GarenaSDK:* | grep -i "access_token\|open_id\|token_grant"</div>
+    </div>
+
+    <!-- Bước 5: Giải thích kết quả -->
+    <div style="background:#001a0f;border:1px solid rgba(0,255,180,0.25);border-radius:6px;padding:12px;font-size:0.8rem;margin-bottom:12px;">
+      <div style="color:#00ffb4;font-weight:bold;margin-bottom:6px;">📋 Kết quả cần tìm:</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;color:#aaffdd;line-height:1.8;">
+        <div>
+          <code style="color:#ffcc55;">access_token</code> — chuỗi dài ~200-400 ký tự<br>
+          <code style="color:#ffcc55;">open_id</code> — dãy số (Garena UID của bạn)
+        </div>
+        <div>
+          Sau khi có 2 giá trị này → nhập vào ô<br>
+          <span style="color:#ffaa00;font-weight:bold;">⚡ Nhập Garena Token trực tiếp</span> ở trên ↑
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nội dung tab: KHÔNG ROOT -->
+  <div id="adb-content-noroot" style="display:none;">
+    <div style="background:#1a1400;border:1px solid rgba(255,170,0,0.3);border-radius:6px;padding:12px;margin-bottom:12px;font-size:0.81rem;color:#ffcc55;line-height:1.8;">
+      ⚠️ <strong>Không root:</strong> Free Fire chặn ADB backup (FLAG_ALLOW_BACKUP = false).<br>
+      Cách dưới đây chỉ hoạt động nếu điện thoại có <strong>Android 11 trở xuống</strong> và game <strong>chưa được cập nhật</strong> phòng chống backup.
+    </div>
+    <div class="log-box" style="font-size:0.81rem;line-height:1.9;padding:12px;">
+# Thử backup (có thể bị block):
+adb backup -noapk com.dts.freefireth -f ff_backup.ab
+
+# Nếu tạo được file, convert sang tar:
+dd if=ff_backup.ab bs=24 skip=1 | python3 -c "import zlib,sys; sys.stdout.buffer.write(zlib.decompress(sys.stdin.buffer.read()))" > ff_backup.tar
+tar xf ff_backup.tar
+# Tìm file shared_prefs/*.xml
+
+# === Phương án không cần root: dùng account.garena.com ===
+# Mở https://account.garena.com → Login → F12 → Network
+# Tìm request đến 100067.connect.garena.com
+# Lấy access_token + open_id từ response JSON</div>
+  </div>
+
+  <!-- Nội dung tab: WIFI -->
+  <div id="adb-content-wifi" style="display:none;">
+    <div style="font-size:0.82rem;color:#aaa;margin-bottom:10px;">
+      Kết nối ADB qua WiFi (không cần cắm USB sau lần đầu):
+    </div>
+    <div class="log-box" style="font-size:0.81rem;line-height:1.9;padding:12px;">
+# === Lần đầu: cắm USB để setup ===
+adb tcpip 5555
+adb connect [IP_ĐIỆN_THOẠI]:5555
+# Xem IP điện thoại: Cài đặt → WiFi → [tên mạng] → chi tiết
+
+# === Sau đó rút USB, dùng qua WiFi ===
+adb connect [IP_ĐIỆN_THOẠI]:5555
+adb devices
+# Chạy các lệnh extract như tab "Có Root"
+
+# === Android 11+: Wireless Debugging (không cần USB lần đầu) ===
+# Cài đặt → Tuỳ chọn nhà phát triển → Wireless debugging
+# Pair bằng mã PIN → adb pair [IP]:[PORT]</div>
+  </div>
+
+  <!-- Quick action -->
+  <div style="display:flex;align-items:center;gap:12px;margin-top:8px;padding:10px 14px;background:rgba(0,255,180,0.06);border:1px solid rgba(0,255,180,0.2);border-radius:8px;flex-wrap:wrap;">
+    <div style="font-size:0.82rem;color:#aaffdd;">
+      🎯 Sau khi lấy được <code>access_token</code> + <code>open_id</code>:
+    </div>
+    <button onclick="document.getElementById('direct-access-token').scrollIntoView({behavior:'smooth'});document.getElementById('direct-access-token').focus();"
+            style="padding:7px 16px;border-radius:6px;border:1px solid #ffaa00;background:rgba(255,170,0,0.15);color:#ffaa00;font-size:0.82rem;cursor:pointer;">
+      ↑ Nhập vào ô Garena Token trực tiếp
+    </button>
+  </div>
+</div>
+
 <!-- WEB LOGIN (KHÔNG CẦN ĐIỆN THOẠI) -->
 <div class="card" style="margin-bottom:20px;border-color:rgba(0,204,255,0.3);">
   <div class="card-header">
@@ -344,6 +521,18 @@ function startStream(task_id) {
     document.getElementById('log-badge').style.display = 'none';
     appendLog('[!] Stream bị gián đoạn.\n');
   };
+}
+
+function adbTab(name) {
+  ['root','noroot','wifi'].forEach(t => {
+    const btn     = document.getElementById('adb-tab-' + t);
+    const content = document.getElementById('adb-content-' + t);
+    const active  = (t === name);
+    content.style.display = active ? '' : 'none';
+    btn.style.border      = active ? '1px solid rgba(0,255,180,0.4)' : '1px solid rgba(255,255,255,0.15)';
+    btn.style.background  = active ? 'rgba(0,255,180,0.15)' : 'transparent';
+    btn.style.color       = active ? '#00ffb4' : '#888';
+  });
 }
 
 async function startDirectToken() {
