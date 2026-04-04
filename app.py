@@ -420,6 +420,49 @@ def api_tokens_web_login():
     return jsonify({'task_id': task_id})
 
 
+@app.route('/api/tokens/direct_garena', methods=['POST'])
+def api_tokens_direct_garena():
+    """Nhận Garena access_token + open_id → gọi MajorLogin → lưu JWT vào access_real.txt"""
+    data = request.json or {}
+    access_token = (data.get('access_token') or '').strip()
+    open_id      = (data.get('open_id') or '').strip()
+    region       = (data.get('region') or 'VN').upper()
+
+    if not access_token or not open_id:
+        return jsonify({'error': 'Thiếu access_token hoặc open_id'}), 400
+
+    task_id, log_q = _create_task()
+
+    _bot_dir = os.path.join(BASE_DIR, 'tools', 'bot')
+    if _bot_dir not in sys.path:
+        sys.path.insert(0, _bot_dir)
+
+    def _run():
+        try:
+            from web_token_login import major_login
+            log_q.put(f'[*] Bắt đầu MajorLogin cho open_id={open_id} region={region}')
+            log_q.put(f'[*] access_token length: {len(access_token)}')
+            result = major_login(access_token, open_id, region, log_q=log_q)
+            if result:
+                # Lưu vào access_real.txt
+                real_file = os.path.join(DATA_DIR, 'access_real.txt')
+                with open(real_file, 'a', encoding='utf-8') as f:
+                    f.write(result + '\n')
+                log_q.put(f'\n✅ Thành công! JWT đã lưu vào access_real.txt')
+                log_q.put(f'   JWT: {result[:60]}...')
+            else:
+                log_q.put('\n❌ MajorLogin thất bại — kiểm tra access_token có còn hiệu lực không.')
+        except Exception as e:
+            import traceback
+            log_q.put(f'[!] Lỗi: {e}')
+            log_q.put(traceback.format_exc())
+        finally:
+            log_q.put('[DONE]')
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({'task_id': task_id})
+
+
 @app.route('/api/tokens/generate', methods=['POST'])
 def api_tokens_generate():
     data = request.json or {}

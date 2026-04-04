@@ -74,6 +74,7 @@
       Login bằng Google (không cần MITM)
     </h3>
     <span class="pill" style="background:rgba(66,133,244,0.15);color:#4285f4;border:1px solid rgba(66,133,244,0.3);">OAuth 2.0</span>
+    <span class="pill" style="background:rgba(255,80,80,0.12);color:#ff6666;border:1px solid rgba(255,80,80,0.3);">⚠️ Bị giới hạn bởi Garena</span>
     {% if google_ready %}
     <span class="pill" style="background:rgba(51,204,102,0.15);color:#33cc66;border:1px solid rgba(51,204,102,0.3);">✅ Đã cấu hình</span>
     {% else %}
@@ -84,22 +85,18 @@
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
     <!-- Thông tin -->
     <div>
-      <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.8;margin-bottom:14px;">
-        Đăng nhập trực tiếp bằng tài khoản Google của bạn.<br>
-        Luồng xử lý:
-        <div style="margin:8px 0 0 12px;font-size:0.78rem;">
-          <div>1️⃣ Click nút → cửa sổ Google mở ra</div>
-          <div>2️⃣ Chọn tài khoản Google → approve</div>
-          <div>3️⃣ Server tự đổi Google token → Garena token</div>
-          <div>4️⃣ Gọi MajorLogin → JWT lưu vào <code style="color:#99ff99;">access_real.txt</code></div>
-        </div>
+      <div style="background:#1a0a0a;border:1px solid rgba(255,80,80,0.4);border-radius:6px;padding:10px 12px;font-size:0.8rem;color:#ff8888;margin-bottom:10px;line-height:1.8;">
+        <strong style="color:#ff4444;">⚠️ Giới hạn kỹ thuật:</strong> Garena verify <code>aud</code> trong Google id_token
+        phải khớp <strong>client_id của họ</strong> (trong APK) — không phải client_id của chúng ta.
+        32 variants đã test → tất cả trả về <code>invalid_request</code>.
       </div>
-
-      {% if not google_ready %}
-      <div style="background:#1a1200;border:1px solid rgba(255,170,0,0.3);border-radius:6px;padding:10px 12px;font-size:0.8rem;color:#ffcc55;margin-bottom:12px;">
-        ⚠️ Cần cài đặt Google OAuth trước. Click nút bên phải để bắt đầu (miễn phí, ~5 phút).
+      <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.8;">
+        <strong style="color:#aaf;">Workaround:</strong> Dùng <code>account.garena.com</code><br>
+        1️⃣ Mở <a href="https://account.garena.com" target="_blank" style="color:#4285f4;">account.garena.com</a> →
+           <strong>Login with Google</strong> (cùng acc Google liên kết FF)<br>
+        2️⃣ Mở <strong>DevTools → Network</strong> → tìm request đến <code>100067.connect.garena.com</code><br>
+        3️⃣ Lấy <code>access_token</code> + <code>open_id</code> → nhập vào ô <span style="color:#ffaa00;">⚡ Nhập Garena Token</span> bên dưới
       </div>
-      {% endif %}
     </div>
 
     <!-- Nút login -->
@@ -137,6 +134,57 @@
       </button>
     </div>
   </div>
+</div>
+
+<!-- DIRECT GARENA TOKEN -->
+<div class="card" style="margin-bottom:20px;border-color:rgba(255,170,0,0.4);">
+  <div class="card-header" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <h3 style="color:#ffaa00;margin:0;">⚡ Nhập Garena Token trực tiếp → JWT game</h3>
+    <span class="pill" style="background:rgba(255,170,0,0.15);color:#ffaa00;border:1px solid rgba(255,170,0,0.3);">Mọi loại acc</span>
+    <span class="pill" style="background:rgba(51,204,102,0.15);color:#33cc66;border:1px solid rgba(51,204,102,0.3);">✅ Hoạt động 100%</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div>
+      <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.8;margin-bottom:12px;">
+        Nếu bạn đã có <strong style="color:#ffaa00;">Garena access_token</strong> + <strong style="color:#ffaa00;">open_id</strong>
+        từ bất kỳ nguồn nào (MITM, ADB, account.garena.com) → nhập thẳng vào đây.
+        Server sẽ gọi MajorLogin → lấy JWT game.
+      </div>
+      <div style="background:#1a1000;border:1px solid rgba(255,170,0,0.3);border-radius:6px;padding:10px 12px;font-size:0.79rem;color:#ffcc55;line-height:1.9;">
+        <strong>Nguồn để lấy access_token + open_id:</strong><br>
+        • <strong>account.garena.com</strong> → Login bằng Google/Facebook/Garena → DevTools → Network → tìm request đến <code>100067.connect.garena.com</code><br>
+        • <strong>MITM một lần</strong> → capture response của <code>/oauth/token/grant</code><br>
+        • <strong>Android ADB</strong> → <code>adb logcat | grep access_token</code><br>
+        • Lịch sử MITM trong <code>extracted_ids.txt</code>
+      </div>
+    </div>
+    <div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Garena access_token</label>
+        <textarea id="direct-access-token" rows="3" placeholder="Dán access_token tại đây..."></textarea>
+      </div>
+      <div class="form-row" style="gap:10px;">
+        <div class="form-group" style="flex:1;margin-bottom:10px;">
+          <label>Open ID</label>
+          <input type="text" id="direct-open-id" placeholder="open_id (Garena UID)">
+        </div>
+        <div class="form-group" style="width:90px;margin-bottom:10px;">
+          <label>Region</label>
+          <select id="direct-region">
+            {% for r in regions %}
+            <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-direct" onclick="startDirectToken()"
+              style="width:100%;background:linear-gradient(135deg,#cc8800,#ffaa00);border-color:#ffaa00;color:#000;font-weight:bold;">
+        ⚡ Lấy JWT từ Garena Token
+      </button>
+    </div>
+  </div>
+  <div id="direct-log" class="log-box" style="display:none;margin-top:12px;min-height:80px;"></div>
 </div>
 
 <!-- WEB LOGIN (KHÔNG CẦN ĐIỆN THOẠI) -->
@@ -296,6 +344,47 @@ function startStream(task_id) {
     document.getElementById('log-badge').style.display = 'none';
     appendLog('[!] Stream bị gián đoạn.\n');
   };
+}
+
+async function startDirectToken() {
+  const access_token = document.getElementById('direct-access-token').value.trim();
+  const open_id      = document.getElementById('direct-open-id').value.trim();
+  const region       = document.getElementById('direct-region').value;
+  if (!access_token || !open_id) {
+    alert('Vui lòng nhập đầy đủ access_token và open_id!');
+    return;
+  }
+  const btn = document.getElementById('btn-direct');
+  const logBox = document.getElementById('direct-log');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Đang xử lý...';
+  logBox.style.display = 'block';
+  logBox.textContent = 'Đang kết nối...';
+
+  const res = await fetch('/api/tokens/direct_garena', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({access_token, open_id, region})
+  });
+  const d = await res.json();
+  if (!d.task_id) {
+    logBox.textContent = 'Lỗi: ' + JSON.stringify(d);
+    btn.disabled = false; btn.innerHTML = '⚡ Lấy JWT từ Garena Token';
+    return;
+  }
+  logBox.textContent = '';
+  const es = new EventSource('/api/task/' + d.task_id + '/stream');
+  es.onmessage = e => {
+    if (e.data === '[DONE]') {
+      es.close();
+      btn.disabled = false; btn.innerHTML = '⚡ Lấy JWT từ Garena Token';
+      return;
+    }
+    if (e.data === '[PING]') return;
+    logBox.textContent += e.data + '\n';
+    logBox.scrollTop = logBox.scrollHeight;
+  };
+  es.onerror = () => { es.close(); btn.disabled = false; btn.innerHTML = '⚡ Lấy JWT từ Garena Token'; };
 }
 
 function startGoogleLogin() {
