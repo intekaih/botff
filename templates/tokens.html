@@ -164,9 +164,9 @@ for PKG in com.dts.freefireth com.dts.freefiremax; do
     echo ""
     echo "==== $PKG ===="
     find $DIR/shared_prefs -name '*.xml' 2>/dev/null | while read f; do
-      if grep -qi 'access_token\|open_id\|garena_token' "$f" 2>/dev/null; then
+      if grep -qiE 'access_token|open_id|garena_token' "$f" 2>/dev/null; then
         echo "[FILE] $f"
-        grep -i 'access_token\|open_id\|garena_token' "$f" 2>/dev/null
+        grep -iE 'access_token|open_id|garena_token' "$f" 2>/dev/null
       fi
     done
   else
