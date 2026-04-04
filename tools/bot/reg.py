@@ -153,7 +153,7 @@ def worker(thread_id):
 
 
 
-def create_acc(region):
+def create_acc(region, proxy=None):
     password = generate_custom_password()
     data = f"password={password}&client_type=2&source=2&app_id=100067"
     message = data.encode('utf-8')
@@ -172,12 +172,12 @@ def create_acc(region):
     response = requests.post(url, headers=headers, data=data, proxies=proxy, verify=False)
     try:
         uid = response.json()['uid']
-        return token(uid, password,region)
+        return token(uid, password, region, proxy)
     except Exception as e:
         return create_acc(region, proxy)
 
 
-def token(uid , password , region):
+def token(uid , password , region, proxy=None):
     url = "https://100067.connect.garena.com/oauth/guest/token/grant"
 
     headers = {
@@ -289,7 +289,7 @@ def encrypt_api(plain_text):
 
 
 
-def chooseregion(data_bytes, jwt_token):
+def chooseregion(data_bytes, jwt_token, proxy=None):
     url = "https://loginbp.ggblueshark.com/ChooseRegion"
     payload = data_bytes
     headers = {
@@ -355,7 +355,7 @@ def login(uid , password, access_token , open_id, response , status_code , name 
             fields = {1:region}
             
             fields = bytes.fromhex(encrypt_api(CrEaTe_ProTo(fields).hex()))
-            r = chooseregion(fields, BASE64_TOKEN)
+            r = chooseregion(fields, BASE64_TOKEN, proxy)
 
             
             if r == 200:
@@ -371,7 +371,7 @@ def login(uid , password, access_token , open_id, response , status_code , name 
     
 
 
-def login_server(uid , password, access_token , open_id, response , status_code , name , region):
+def login_server(uid , password, access_token , open_id, response , status_code , name , region, proxy=None):
     lang = get_region(region)
     lang_b = lang.encode("ascii")
 
