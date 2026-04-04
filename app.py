@@ -341,7 +341,7 @@ def api_mitm_start():
         try:
             mitm_process = subprocess.Popen(
                 ['mitmdump', '-s', MITM_SCRIPT, '--listen-port', '8080',
-                 '--set', 'ssl_insecure=true'],
+                 '--set', 'ssl_insecure=true', '--set', 'block_global=false'],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 cwd=os.path.join(BASE_DIR, 'tools', 'mitm_scripts')
             )
