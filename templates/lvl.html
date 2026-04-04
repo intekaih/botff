@@ -86,8 +86,8 @@
           <div>Loại:&nbsp;&nbsp;&nbsp; <span style="color:var(--green)">SOCKS5</span></div>
           <div>Host:&nbsp;&nbsp;&nbsp; <span style="color:var(--green)" id="guide-host">IP máy chủ (xem bên trái)</span></div>
           <div>Port:&nbsp;&nbsp;&nbsp; <span style="color:var(--green)" id="guide-port">{{ port }}</span></div>
-          <div>User:&nbsp;&nbsp;&nbsp; <span style="color:var(--red)">Mtuandz</span></div>
-          <div>Pass:&nbsp;&nbsp;&nbsp; <span style="color:var(--red)">Mtuandz</span></div>
+          <div>User:&nbsp;&nbsp;&nbsp; <span style="color:var(--red)">kaih</span></div>
+          <div>Pass:&nbsp;&nbsp;&nbsp; <span style="color:var(--red)">123</span></div>
         </div>
 
         <div style="height:1px;background:var(--border);margin:14px 0;"></div>
@@ -214,7 +214,7 @@
       const data = await r.json();
       if (data.success) {
         showAlert('⏹ ' + data.message, 'success');
-        updateUI(false, null, 'Mtuandz', 'Mtuandz');
+        updateUI(false, null, 'kaih', '123');
         stopPolling();
         document.getElementById('stat-games').textContent = '—';
         document.getElementById('stat-socket').textContent = '—';
@@ -243,7 +243,7 @@
       const r = await fetch('/api/lvl/status');
       const data = await r.json();
       if (!data.running && pollingInterval) {
-        updateUI(false, null, 'Mtuandz', 'Mtuandz');
+        updateUI(false, null, 'kaih', '123');
         stopPolling();
         showAlert('⚠ Proxy đã dừng bất ngờ', 'error');
       }

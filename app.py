@@ -354,8 +354,8 @@ def lvl_page():
     return render_template('lvl.html',
                            running=running,
                            port=lvl_proxy_port,
-                           username=lvl_proxy_instance.username if lvl_proxy_instance else 'Mtuandz',
-                           password=lvl_proxy_instance.password if lvl_proxy_instance else 'Mtuandz')
+                           username=lvl_proxy_instance.username if lvl_proxy_instance else 'kaih',
+                           password=lvl_proxy_instance.password if lvl_proxy_instance else '123')
 
 
 @app.route('/api/lvl/start', methods=['POST'])
@@ -409,8 +409,8 @@ def api_lvl_status():
     return jsonify({
         'running': running,
         'port': lvl_proxy_port if running else None,
-        'username': lvl_proxy_instance.username if lvl_proxy_instance else 'Mtuandz',
-        'password': lvl_proxy_instance.password if lvl_proxy_instance else 'Mtuandz',
+        'username': lvl_proxy_instance.username if lvl_proxy_instance else 'kaih',
+        'password': lvl_proxy_instance.password if lvl_proxy_instance else '123',
     })
 
 

@@ -19,8 +19,8 @@ state_lock = threading.Lock()  # Lock riêng cho state variables
 
 class Proxy:
     def __init__(self):
-        self.username = "Mtuandz"
-        self.password = "Mtuandz"
+        self.username = "kaih"
+        self.password = "123"
 
     def handle_client(self, conn):
         try:
