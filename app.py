@@ -222,7 +222,11 @@ GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET = _load_google_config()
 _google_pending = {}   # state → {region, ts}
 
 def _google_redirect_uri():
-    return f"https://{request.host}/auth/google/callback"
+    # Ưu tiên: X-Forwarded-Host (Replit proxy) → REPLIT_DEV_DOMAIN → request.host
+    fwd = request.headers.get('X-Forwarded-Host') or request.headers.get('X-Real-Host')
+    dev = os.environ.get('REPLIT_DEV_DOMAIN', '')
+    host = fwd or dev or request.host
+    return f"https://{host}/auth/google/callback"
 
 
 @app.route('/api/google/set_credentials', methods=['POST'])
@@ -247,7 +251,14 @@ def api_google_set_credentials():
 def auth_google_start():
     redir = _google_redirect_uri()
     if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-        return render_template('google_setup.html', redirect_uri=redir), 200
+        # Tạo danh sách tất cả redirect URIs cần đăng ký
+        uris = [redir]
+        prod_domain = "botffkaih.replit.app"
+        prod_uri = f"https://{prod_domain}/auth/google/callback"
+        if prod_uri != redir:
+            uris.append(prod_uri)
+        return render_template('google_setup.html', redirect_uri=redir,
+                               all_uris=uris), 200
 
     region = request.args.get('region', 'VN').upper()
     state  = str(uuid.uuid4())
