@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BOT FF — {% block title %}Dashboard{% endblock %}</title>
+  <style>
+    :root {
+      --red: #ff3300;
+      --red-dark: #cc2200;
+      --red-glow: rgba(255,51,0,0.25);
+      --bg: #0a0a0a;
+      --bg2: #111111;
+      --bg3: #1a1a1a;
+      --bg4: #222222;
+      --border: #2a2a2a;
+      --text: #e0e0e0;
+      --text-dim: #888;
+      --green: #33cc66;
+      --yellow: #ffaa00;
+      --blue: #3399ff;
+      --sidebar-w: 220px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; min-height: 100vh; display: flex; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: var(--sidebar-w); min-height: 100vh; background: var(--bg2);
+      border-right: 1px solid var(--border); display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+    }
+    .sidebar-logo {
+      padding: 20px 16px 16px; border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+    .sidebar-logo h1 { color: var(--red); font-size: 1.4rem; letter-spacing: 3px; text-shadow: 0 0 15px var(--red-glow); }
+    .sidebar-logo p { color: var(--text-dim); font-size: 0.7rem; margin-top: 4px; }
+    .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 16px; color: var(--text-dim);
+      text-decoration: none; font-size: 0.85rem;
+      border-left: 3px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .sidebar-nav a:hover { color: var(--text); background: var(--bg3); border-left-color: var(--border); }
+    .sidebar-nav a.active { color: var(--red); background: rgba(255,51,0,0.08); border-left-color: var(--red); }
+    .sidebar-nav .nav-icon { font-size: 1rem; width: 18px; text-align: center; }
+    .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+    .sidebar-footer p { color: var(--text-dim); font-size: 0.7rem; text-align: center; }
+
+    /* MAIN */
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+    .topbar {
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      padding: 14px 28px; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar h2 { font-size: 1rem; color: var(--text); }
+    .topbar .breadcrumb { color: var(--text-dim); font-size: 0.8rem; }
+    .content { padding: 28px; flex: 1; }
+
+    /* CARDS */
+    .card {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 20px; margin-bottom: 20px;
+    }
+    .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .card-header h3 { color: var(--red); font-size: 0.95rem; }
+    .card-header .badge {
+      background: var(--red); color: white; border-radius: 4px;
+      padding: 2px 8px; font-size: 0.72rem;
+    }
+
+    /* STATS GRID */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 20px; text-align: center;
+      border-top: 3px solid var(--red);
+    }
+    .stat-card .stat-value { font-size: 2rem; font-weight: bold; color: var(--red); line-height: 1; }
+    .stat-card .stat-label { color: var(--text-dim); font-size: 0.78rem; margin-top: 6px; }
+
+    /* FORMS */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; color: var(--text-dim); font-size: 0.8rem; margin-bottom: 6px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; background: var(--bg4); border: 1px solid var(--border);
+      color: var(--text); border-radius: 5px; padding: 9px 12px;
+      font-family: 'Courier New', monospace; font-size: 0.88rem; outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--red);
+    }
+    .form-group textarea { resize: vertical; min-height: 100px; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 10px 20px; border-radius: 5px; border: none;
+      font-family: 'Courier New', monospace; font-size: 0.88rem;
+      cursor: pointer; transition: all 0.15s; font-weight: bold;
+    }
+    .btn-primary { background: var(--red); color: white; }
+    .btn-primary:hover { background: var(--red-dark); }
+    .btn-primary:disabled { background: #555; cursor: not-allowed; }
+    .btn-secondary { background: var(--bg4); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--red); color: var(--red); }
+    .btn-success { background: #1a4a1a; color: var(--green); border: 1px solid #2a6a2a; }
+    .btn-success:hover { background: #2a6a2a; }
+    .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+
+    /* LOG BOX */
+    .log-box {
+      background: #070707; border: 1px solid var(--border);
+      border-radius: 6px; padding: 14px 16px;
+      font-family: 'Courier New', monospace; font-size: 0.82rem;
+      height: 320px; overflow-y: auto; white-space: pre-wrap;
+      color: #99ff99; line-height: 1.5;
+    }
+    .log-box .log-err { color: #ff6666; }
+    .log-box .log-warn { color: #ffaa00; }
+    .log-box .log-sep { color: #555; }
+
+    /* TOGGLE */
+    .toggle-wrap { display: flex; align-items: center; gap: 12px; }
+    .toggle { position: relative; width: 48px; height: 26px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer; inset: 0;
+      background: var(--bg4); border: 1px solid var(--border);
+      border-radius: 26px; transition: .3s;
+    }
+    .toggle-slider:before {
+      content: ''; position: absolute;
+      width: 18px; height: 18px; left: 3px; bottom: 3px;
+      background: var(--text-dim); border-radius: 50%; transition: .3s;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--red); border-color: var(--red); }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(22px); background: white; }
+    .toggle-label { color: var(--text); font-size: 0.88rem; }
+
+    /* STATUS PILL */
+    .pill {
+      display: inline-block; border-radius: 20px; padding: 3px 12px;
+      font-size: 0.75rem; font-weight: bold;
+    }
+    .pill-green { background: rgba(51,204,102,0.15); color: var(--green); border: 1px solid rgba(51,204,102,0.3); }
+    .pill-red { background: rgba(255,51,0,0.15); color: var(--red); border: 1px solid rgba(255,51,0,0.3); }
+    .pill-yellow { background: rgba(255,170,0,0.15); color: var(--yellow); border: 1px solid rgba(255,170,0,0.3); }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th { background: var(--bg4); color: var(--text-dim); padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .td-ok { color: var(--green); }
+    .td-fail { color: var(--red); }
+
+    /* ALERTS */
+    .alert {
+      padding: 12px 16px; border-radius: 5px; margin-bottom: 16px;
+      font-size: 0.85rem; display: none;
+    }
+    .alert-success { background: rgba(51,204,102,0.1); border: 1px solid rgba(51,204,102,0.3); color: var(--green); }
+    .alert-error { background: rgba(255,51,0,0.1); border: 1px solid rgba(255,51,0,0.3); color: #ff6666; }
+    .alert.show { display: block; }
+
+    /* SPINNER */
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.7s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+    @media (max-width: 700px) {
+      .sidebar { width: 60px; }
+      .sidebar-logo h1 { font-size: 0.8rem; }
+      .sidebar-logo p, .sidebar-footer p, .sidebar-nav a span { display: none; }
+      .sidebar-nav a { justify-content: center; padding: 12px; }
+      .main { margin-left: 60px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>🔥 BOT FF</h1>
+    <p>Free Fire Toolkit</p>
+  </div>
+  <div class="sidebar-nav">
+    <a href="/" class="{% if request.path == '/' %}active{% endif %}">
+      <span class="nav-icon">📊</span><span>Dashboard</span>
+    </a>
+    <a href="/like" class="{% if request.path == '/like' %}active{% endif %}">
+      <span class="nav-icon">👍</span><span>Buff Like</span>
+    </a>
+    <a href="/tokens" class="{% if request.path == '/tokens' %}active{% endif %}">
+      <span class="nav-icon">🔑</span><span>Quản lý Token</span>
+    </a>
+    <a href="/proxies" class="{% if request.path == '/proxies' %}active{% endif %}">
+      <span class="nav-icon">🌐</span><span>Proxy Manager</span>
+    </a>
+    <a href="/scheduler" class="{% if request.path == '/scheduler' %}active{% endif %}">
+      <span class="nav-icon">⏰</span><span>Lên Lịch</span>
+    </a>
+    <a href="/stats" class="{% if request.path == '/stats' %}active{% endif %}">
+      <span class="nav-icon">📈</span><span>Thống Kê</span>
+    </a>
+    <a href="/mitm" class="{% if request.path == '/mitm' %}active{% endif %}">
+      <span class="nav-icon">🎨</span><span>MITM Mod</span>
+    </a>
+  </div>
+  <div class="sidebar-footer">
+    <p>BOT FF v2.0</p>
+  </div>
+</nav>
+<div class="main">
+  <div class="topbar">
+    <h2>{% block topbar_title %}Dashboard{% endblock %}</h2>
+    <span class="breadcrumb">BOT FF / {% block breadcrumb %}Tổng quan{% endblock %}</span>
+  </div>
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+</body>
+</html>

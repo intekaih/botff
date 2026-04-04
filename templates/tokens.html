@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Quản lý Token{% endblock %}
+{% block topbar_title %}Quản lý Token{% endblock %}
+{% block breadcrumb %}Token{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;margin-bottom:20px;">
+
+  <!-- TẠO TOKEN -->
+  <div class="card">
+    <div class="card-header"><h3>➕ Tạo Token mới (reg.py)</h3></div>
+    <div class="form-group">
+      <label>Số tài khoản cần tạo</label>
+      <input type="number" id="gen-num" value="10" min="1" max="200">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Region</label>
+        <select id="gen-region">
+          {% for r in regions %}
+          <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Số luồng</label>
+        <input type="number" id="gen-threads" value="5" min="1" max="20">
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btn-gen" onclick="startGenerate()" style="width:100%;">
+      🔧 Tạo tài khoản & Token
+    </button>
+  </div>
+
+  <!-- KIỂM TRA TOKEN -->
+  <div class="card">
+    <div class="card-header"><h3>🔍 Kiểm tra Token</h3></div>
+    <div style="background:var(--bg4);border-radius:6px;padding:14px;margin-bottom:16px;text-align:center;">
+      <div style="font-size:2.2rem;font-weight:bold;color:var(--red);" id="token-count">{{ token_count }}</div>
+      <div style="font-size:0.8rem;color:var(--text-dim);margin-top:4px;">Token trong access.txt</div>
+    </div>
+    <div class="form-group">
+      <label>Số luồng kiểm tra</label>
+      <input type="number" id="chk-threads" value="10" min="1" max="30">
+    </div>
+    <button class="btn btn-success" id="btn-chk" onclick="startCheck()" style="width:100%;">
+      🔍 Kiểm tra & Lọc token
+    </button>
+    <p style="color:var(--text-dim);font-size:0.78rem;margin-top:8px;">
+      Token hết hạn/chết sẽ tự động bị xoá khỏi access.txt
+    </p>
+  </div>
+</div>
+
+<!-- LOG BOX -->
+<div class="card">
+  <div class="card-header">
+    <h3>📟 Log hoạt động</h3>
+    <span id="log-badge" class="pill pill-yellow" style="display:none;">🔴 Đang chạy</span>
+    <button class="btn btn-secondary btn-sm" onclick="clearLog()" style="margin-left:auto;">🗑 Xoá</button>
+  </div>
+  <div class="log-box" id="log-box">Log sẽ xuất hiện ở đây khi bạn chạy tác vụ...</div>
+</div>
+
+<script>
+let activeEs = null;
+
+function startStream(task_id) {
+  if (activeEs) activeEs.close();
+  document.getElementById('log-badge').style.display = 'inline-block';
+  activeEs = new EventSource(`/api/task/${task_id}/stream`);
+  activeEs.onmessage = (e) => {
+    const msg = e.data;
+    if (msg === '[DONE]') {
+      activeEs.close();
+      document.getElementById('log-badge').style.display = 'none';
+      document.getElementById('btn-gen').disabled = false;
+      document.getElementById('btn-gen').innerHTML = '🔧 Tạo tài khoản & Token';
+      document.getElementById('btn-chk').disabled = false;
+      document.getElementById('btn-chk').innerHTML = '🔍 Kiểm tra & Lọc token';
+      refreshCount();
+      return;
+    }
+    if (msg === '[PING]') return;
+    appendLog(msg.replace(/<br>/g, '\n') + '\n');
+  };
+  activeEs.onerror = () => {
+    activeEs.close();
+    document.getElementById('log-badge').style.display = 'none';
+    appendLog('[!] Stream bị gián đoạn.\n');
+  };
+}
+
+async function startGenerate() {
+  const num = document.getElementById('gen-num').value;
+  const region = document.getElementById('gen-region').value;
+  const threads = document.getElementById('gen-threads').value;
+
+  clearLog();
+  const btn = document.getElementById('btn-gen');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Đang tạo...';
+
+  const res = await fetch('/api/tokens/generate', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({num_accounts: parseInt(num), threads: parseInt(threads), region})
+  });
+  const {task_id} = await res.json();
+  startStream(task_id);
+}
+
+async function startCheck() {
+  const threads = document.getElementById('chk-threads').value;
+  clearLog();
+  const btn = document.getElementById('btn-chk');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Đang kiểm tra...';
+
+  const res = await fetch('/api/tokens/check', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({threads: parseInt(threads)})
+  });
+  const {task_id} = await res.json();
+  startStream(task_id);
+}
+
+async function refreshCount() {
+  const r = await fetch('/api/stats');
+  const d = await r.json();
+  document.getElementById('token-count').textContent = d.token_count;
+}
+
+function appendLog(text) {
+  const box = document.getElementById('log-box');
+  if (box.textContent.startsWith('Log sẽ')) box.textContent = '';
+  box.textContent += text;
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('log-box').textContent = '';
+}
+</script>
+{% endblock %}

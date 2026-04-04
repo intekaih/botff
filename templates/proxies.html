@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Proxy Manager{% endblock %}
+{% block topbar_title %}Proxy Manager{% endblock %}
+{% block breadcrumb %}Proxy{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;">
+
+  <div class="card">
+    <div class="card-header"><h3>🌐 Danh sách Proxy</h3></div>
+    <div class="alert alert-success" id="alert-ok"></div>
+    <div class="alert alert-error" id="alert-err"></div>
+    <div class="form-group">
+      <label>Nhập danh sách proxy (mỗi dòng một proxy)</label>
+      <textarea id="proxy-content" style="height:400px;font-size:0.82rem;" placeholder="Ví dụ:&#10;http://user:pass@1.2.3.4:8080&#10;socks5://user:pass@5.6.7.8:1080&#10;1.2.3.4:8080">{{ proxy_content }}</textarea>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" onclick="saveProxies()">💾 Lưu danh sách</button>
+      <button class="btn btn-secondary" onclick="clearAll()">🗑 Xoá tất cả</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-header"><h3>ℹ️ Hướng dẫn</h3></div>
+      <div style="color:var(--text-dim);font-size:0.83rem;line-height:2;">
+        <div style="color:var(--text);font-weight:bold;margin-bottom:8px;">Định dạng hỗ trợ:</div>
+        <div style="background:var(--bg4);border-radius:4px;padding:10px;font-family:monospace;color:var(--green);font-size:0.78rem;line-height:1.8;margin-bottom:12px;">
+          http://1.2.3.4:8080<br>
+          https://user:pass@1.2.3.4:3128<br>
+          socks4://1.2.3.4:1080<br>
+          socks5://user:pass@1.2.3.4:1080<br>
+          1.2.3.4:8080
+        </div>
+        <div style="margin-top:8px;">• Proxy sẽ được dùng trong <b style="color:var(--text);">Buff Like</b> theo kiểu xoay vòng (rotation)</div>
+        <div style="margin-top:4px;">• Để trống = dùng IP gốc của server</div>
+        <div style="margin-top:4px;">• Nên dùng proxy để tránh bị chặn IP</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>📊 Trạng thái</h3></div>
+      <div style="text-align:center;padding:12px 0;">
+        <div id="proxy-count" style="font-size:2.5rem;font-weight:bold;color:var(--red);">
+          {{ proxy_content.split('\n') | selectattr('length') | list | length }}
+        </div>
+        <div style="color:var(--text-dim);font-size:0.8rem;margin-top:6px;">Proxy trong danh sách</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function saveProxies() {
+  const content = document.getElementById('proxy-content').value;
+  const res = await fetch('/api/proxies/save', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({content})
+  });
+  const d = await res.json();
+  if (d.success) {
+    showAlert('ok', `✅ Đã lưu ${d.count} proxy thành công!`);
+    document.getElementById('proxy-count').textContent = d.count;
+  } else {
+    showAlert('err', '❌ Lưu thất bại!');
+  }
+}
+
+function clearAll() {
+  document.getElementById('proxy-content').value = '';
+  document.getElementById('proxy-count').textContent = '0';
+}
+
+function showAlert(type, msg) {
+  document.getElementById('alert-ok').classList.remove('show');
+  document.getElementById('alert-err').classList.remove('show');
+  const el = document.getElementById(type === 'ok' ? 'alert-ok' : 'alert-err');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+document.getElementById('proxy-content').addEventListener('input', () => {
+  const lines = document.getElementById('proxy-content').value.split('\n').filter(l => l.trim());
+  document.getElementById('proxy-count').textContent = lines.length;
+});
+</script>
+{% endblock %}

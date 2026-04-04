@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Lên Lịch{% endblock %}
+{% block topbar_title %}Lên lịch tự động{% endblock %}
+{% block breadcrumb %}Scheduler{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:420px 1fr;gap:20px;align-items:start;">
+
+  <div class="card">
+    <div class="card-header">
+      <h3>⏰ Cấu hình lịch chạy</h3>
+      {% if cfg.enabled %}
+        <span class="pill pill-green">Đang bật</span>
+      {% else %}
+        <span class="pill pill-red">Tắt</span>
+      {% endif %}
+    </div>
+
+    <div class="alert alert-success" id="alert-ok"></div>
+    <div class="alert alert-error" id="alert-err"></div>
+
+    <div class="form-group">
+      <label>Bật / Tắt lên lịch</label>
+      <div class="toggle-wrap">
+        <label class="toggle">
+          <input type="checkbox" id="sch-enabled" {% if cfg.enabled %}checked{% endif %}>
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label" id="toggle-label">{% if cfg.enabled %}Đang bật — chạy hàng ngày{% else %}Đang tắt{% endif %}</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Giờ chạy hàng ngày</label>
+      <input type="time" id="sch-time" value="{{ cfg.time or '06:00' }}">
+    </div>
+
+    <div class="form-group">
+      <label>UID mục tiêu (nhiều UID cách nhau bằng dấu phẩy)</label>
+      <input type="text" id="sch-uid" value="{{ cfg.uid or '' }}" placeholder="Ví dụ: 14210443593, 9876543210">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Region</label>
+        <select id="sch-region">
+          {% for r in regions %}
+          <option value="{{ r }}" {% if r == cfg.region %}selected{% endif %}>{{ r }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Số luồng</label>
+        <input type="number" id="sch-threads" value="{{ cfg.threads or 10 }}" min="1" max="50">
+      </div>
+      <div class="form-group">
+        <label>Giới hạn token (0=tất cả)</label>
+        <input type="number" id="sch-max" value="{{ cfg.max_tokens or 0 }}" min="0">
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveScheduler()" style="width:100%;">
+      💾 Lưu cấu hình
+    </button>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-header"><h3>📋 Thông tin lịch</h3></div>
+      <div style="line-height:2.2;font-size:0.87rem;color:var(--text-dim);">
+        <div>Trạng thái:
+          <span id="info-status">
+            {% if cfg.enabled %}<span class="pill pill-green">🟢 Đang hoạt động</span>
+            {% else %}<span class="pill pill-red">🔴 Đã tắt</span>{% endif %}
+          </span>
+        </div>
+        <div>Giờ chạy: <span id="info-time" style="color:var(--red);font-size:1rem;">{{ cfg.time or '--:--' }}</span></div>
+        <div>UID: <span id="info-uid" style="color:var(--text);">{{ cfg.uid or 'Chưa cài đặt' }}</span></div>
+        <div>Region: <span id="info-region" style="color:var(--text);">{{ cfg.region or 'VN' }}</span></div>
+        <div>Lần chạy tiếp theo:
+          <span style="color:var(--yellow);">
+            {% if next_run %}{{ next_run }}{% else %}--{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>ℹ️ Lưu ý</h3></div>
+      <div style="color:var(--text-dim);font-size:0.83rem;line-height:1.8;">
+        <div>• Scheduler chạy theo giờ server (UTC+0). Nếu bạn ở VN (UTC+7), cài sớm hơn 7 tiếng.</div>
+        <div style="margin-top:6px;">• Cần có đủ token trong <b style="color:var(--text);">access.txt</b> trước khi lịch chạy.</div>
+        <div style="margin-top:6px;">• Mỗi token chỉ like được 1 lần/ngày — Garena giới hạn.</div>
+        <div style="margin-top:6px;">• Hệ thống sẽ tự lưu log vào <b style="color:var(--text);">data/like_log.txt</b>.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.getElementById('sch-enabled').addEventListener('change', (e) => {
+  document.getElementById('toggle-label').textContent = e.target.checked
+    ? 'Đang bật — chạy hàng ngày' : 'Đang tắt';
+});
+
+async function saveScheduler() {
+  const cfg = {
+    enabled: document.getElementById('sch-enabled').checked,
+    time: document.getElementById('sch-time').value,
+    uid: document.getElementById('sch-uid').value.trim(),
+    region: document.getElementById('sch-region').value,
+    threads: parseInt(document.getElementById('sch-threads').value),
+    max_tokens: parseInt(document.getElementById('sch-max').value),
+  };
+
+  if (cfg.enabled && !cfg.uid) {
+    showAlert('err', '❌ Vui lòng nhập UID mục tiêu!');
+    return;
+  }
+
+  const res = await fetch('/api/scheduler/save', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(cfg)
+  });
+  const d = await res.json();
+
+  if (d.success) {
+    showAlert('ok', `✅ Đã lưu! Lịch chạy: ${cfg.time} hàng ngày (${cfg.enabled ? 'Bật' : 'Tắt'})`);
+    document.getElementById('info-time').textContent = cfg.time;
+    document.getElementById('info-uid').textContent = cfg.uid || 'Chưa cài đặt';
+    document.getElementById('info-region').textContent = cfg.region;
+    document.getElementById('info-status').innerHTML = cfg.enabled
+      ? '<span class="pill pill-green">🟢 Đang hoạt động</span>'
+      : '<span class="pill pill-red">🔴 Đã tắt</span>';
+  } else {
+    showAlert('err', '❌ Lưu thất bại!');
+  }
+}
+
+function showAlert(type, msg) {
+  document.getElementById('alert-ok').classList.remove('show');
+  document.getElementById('alert-err').classList.remove('show');
+  const el = document.getElementById(type === 'ok' ? 'alert-ok' : 'alert-err');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Buff Like{% endblock %}
+{% block topbar_title %}Buff Like — Tự động thả tim{% endblock %}
+{% block breadcrumb %}Buff Like{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:380px 1fr;gap:20px;align-items:start;">
+
+  <div>
+    <div class="card">
+      <div class="card-header"><h3>⚙️ Cấu hình Buff Like</h3></div>
+
+      <div class="alert alert-error" id="alert-err"></div>
+
+      <div class="form-group">
+        <label>UID mục tiêu (nhiều UID cách nhau bằng dấu phẩy hoặc xuống dòng)</label>
+        <textarea id="inp-uids" placeholder="Ví dụ:&#10;14210443593&#10;9876543210" rows="4"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Region server</label>
+          <select id="inp-region">
+            {% for r in regions %}
+            <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Số luồng (1–50)</label>
+          <input type="number" id="inp-threads" value="10" min="1" max="50">
+        </div>
+        <div class="form-group">
+          <label>Giới hạn token (0 = tất cả)</label>
+          <input type="number" id="inp-max" value="0" min="0">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-start" onclick="startLike()" style="width:100%;">
+        ▶ Bắt đầu Buff Like
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="clearLog()" style="margin-top:8px;width:100%;">
+        🗑 Xoá log
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>📊 Phiên hiện tại</h3></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center;">
+        <div style="background:var(--bg4);border-radius:6px;padding:14px;">
+          <div id="cnt-ok" style="font-size:1.8rem;color:var(--green);font-weight:bold;">—</div>
+          <div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;">✅ Thành công</div>
+        </div>
+        <div style="background:var(--bg4);border-radius:6px;padding:14px;">
+          <div id="cnt-fail" style="font-size:1.8rem;color:var(--red);font-weight:bold;">—</div>
+          <div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;">❌ Thất bại</div>
+        </div>
+      </div>
+      <div id="status-pill" style="margin-top:12px;text-align:center;"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:0;">
+    <div class="card-header">
+      <h3>📟 Log realtime</h3>
+      <span id="log-badge" class="pill pill-yellow" style="display:none;">🔴 Đang chạy</span>
+    </div>
+    <div class="log-box" id="log-box">Nhấn "Bắt đầu Buff Like" để xem log tại đây...</div>
+  </div>
+
+</div>
+
+<script>
+let currentEs = null;
+let okCount = 0, failCount = 0;
+
+async function startLike() {
+  const uids = document.getElementById('inp-uids').value.trim();
+  const region = document.getElementById('inp-region').value;
+  const threads = document.getElementById('inp-threads').value;
+  const maxTok = document.getElementById('inp-max').value;
+
+  if (!uids) {
+    showErr('Vui lòng nhập UID mục tiêu!');
+    return;
+  }
+
+  hideErr();
+  clearLog();
+  okCount = 0; failCount = 0;
+  document.getElementById('cnt-ok').textContent = '0';
+  document.getElementById('cnt-fail').textContent = '0';
+  document.getElementById('status-pill').innerHTML = '<span class="pill pill-yellow">⏳ Đang chạy...</span>';
+  document.getElementById('log-badge').style.display = 'inline-block';
+
+  const btn = document.getElementById('btn-start');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Đang chạy...';
+
+  if (currentEs) currentEs.close();
+
+  const res = await fetch('/api/like/start', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({uids, region, threads: parseInt(threads), max_tokens: parseInt(maxTok)})
+  });
+
+  if (!res.ok) {
+    const d = await res.json();
+    showErr(d.error || 'Lỗi không xác định');
+    btn.disabled = false;
+    btn.innerHTML = '▶ Bắt đầu Buff Like';
+    return;
+  }
+
+  const {task_id} = await res.json();
+  appendLog(`[*] Task ID: ${task_id}\n`);
+
+  currentEs = new EventSource(`/api/task/${task_id}/stream`);
+  currentEs.onmessage = (e) => {
+    const msg = e.data;
+    if (msg === '[DONE]') {
+      currentEs.close();
+      btn.disabled = false;
+      btn.innerHTML = '▶ Bắt đầu Buff Like';
+      document.getElementById('log-badge').style.display = 'none';
+      document.getElementById('status-pill').innerHTML = '<span class="pill pill-green">✅ Hoàn tất</span>';
+      return;
+    }
+    if (msg === '[PING]') return;
+    const raw = msg.replace(/<br>/g, '\n');
+    if (raw.includes('✅') || raw.includes('LIKE OK')) { okCount++; document.getElementById('cnt-ok').textContent = okCount; }
+    if (raw.includes('❌')) { failCount++; document.getElementById('cnt-fail').textContent = failCount; }
+    appendLog(raw + '\n');
+  };
+  currentEs.onerror = () => {
+    currentEs.close();
+    btn.disabled = false;
+    btn.innerHTML = '▶ Bắt đầu Buff Like';
+    document.getElementById('log-badge').style.display = 'none';
+    appendLog('[!] Kết nối stream bị gián đoạn.\n');
+  };
+}
+
+function appendLog(text) {
+  const box = document.getElementById('log-box');
+  if (box.textContent === 'Nhấn "Bắt đầu Buff Like" để xem log tại đây...') box.textContent = '';
+  box.textContent += text;
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('log-box').textContent = '';
+  okCount = 0; failCount = 0;
+  document.getElementById('cnt-ok').textContent = '—';
+  document.getElementById('cnt-fail').textContent = '—';
+  document.getElementById('status-pill').innerHTML = '';
+}
+
+function showErr(msg) {
+  const el = document.getElementById('alert-err');
+  el.textContent = msg; el.classList.add('show');
+}
+function hideErr() {
+  document.getElementById('alert-err').classList.remove('show');
+}
+</script>
+{% endblock %}

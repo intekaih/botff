@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Thống Kê{% endblock %}
+{% block topbar_title %}Thống kê hoạt động{% endblock %}
+{% block breadcrumb %}Thống Kê{% endblock %}
+
+{% block content %}
+<div class="stats-grid" style="margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.total_runs }}</div>
+    <div class="stat-label">📋 Tổng lần chạy</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--green);">{{ stats.total_ok }}</div>
+    <div class="stat-label">✅ Like thành công (tổng)</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:#ff6666;">{{ stats.total_fail }}</div>
+    <div class="stat-label">❌ Like thất bại (tổng)</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">
+      {% if stats.total_ok + stats.total_fail > 0 %}
+        {{ "%.1f"|format(stats.total_ok / (stats.total_ok + stats.total_fail) * 100) }}%
+      {% else %}--{% endif %}
+    </div>
+    <div class="stat-label">📊 Tỷ lệ thành công</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.token_count }}</div>
+    <div class="stat-label">🔑 Token hiện có</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3>📋 Lịch sử chạy</h3>
+    <span class="badge">{{ logs|length }} bản ghi</span>
+  </div>
+  {% if logs %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Thời gian</th>
+          <th>UID</th>
+          <th>Region</th>
+          <th>✅ OK</th>
+          <th>❌ Fail</th>
+          <th>Tổng</th>
+          <th>Tỷ lệ</th>
+          <th>Thời gian</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td style="color:var(--text-dim);white-space:nowrap;">{{ log.date }}</td>
+          <td style="color:var(--yellow);">{{ log.uid }}</td>
+          <td><span class="pill pill-yellow" style="font-size:0.7rem;">{{ log.region }}</span></td>
+          <td class="td-ok">{{ log.ok }}</td>
+          <td class="td-fail">{{ log.fail }}</td>
+          <td>{{ log.total }}</td>
+          <td>
+            {% set ok_int = log.ok|int %}
+            {% set total_int = log.total|int %}
+            {% if total_int > 0 %}
+              <span style="color:{% if ok_int / total_int >= 0.8 %}var(--green){% elif ok_int / total_int >= 0.5 %}var(--yellow){% else %}var(--red){% endif %};">
+                {{ "%.1f"|format(ok_int / total_int * 100) }}%
+              </span>
+            {% else %}--{% endif %}
+          </td>
+          <td style="color:var(--text-dim);">{{ log.time }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:40px;color:var(--text-dim);">
+    <div style="font-size:2rem;margin-bottom:12px;">📭</div>
+    <div>Chưa có lịch sử. Hãy chạy Buff Like để có dữ liệu thống kê.</div>
+    <a href="/like" class="btn btn-primary" style="text-decoration:none;display:inline-flex;margin-top:16px;">👍 Buff Like ngay</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

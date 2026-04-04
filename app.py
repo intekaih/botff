@@ -1,217 +1,330 @@
-from flask import Flask, render_template_string, jsonify
 import os
 import sys
+import json
+import time
+import uuid
+import threading
+import queue as queue_module
+from datetime import datetime
+from flask import Flask, render_template, jsonify, request, Response, stream_with_context
+
+from bot_runner import (
+    get_stats, read_tokens, read_proxies, read_like_log,
+    run_like_bot, run_token_generator, run_token_checker,
+    DATA_DIR, BASE_DIR
+)
 
 app = Flask(__name__)
 
-HTML = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOT FF - Auto Buff Like Free Fire</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background: #0d0d0d;
-            color: #e0e0e0;
-            font-family: 'Courier New', monospace;
-            min-height: 100vh;
-        }
-        header {
-            background: linear-gradient(135deg, #1a0000 0%, #3a0000 50%, #1a0000 100%);
-            border-bottom: 2px solid #ff3300;
-            padding: 20px;
-            text-align: center;
-        }
-        header h1 {
-            color: #ff3300;
-            font-size: 2rem;
-            letter-spacing: 4px;
-            text-shadow: 0 0 20px #ff3300;
-        }
-        header p {
-            color: #ff9966;
-            margin-top: 8px;
-            font-size: 0.9rem;
-        }
-        .container {
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-        .card {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-left: 4px solid #ff3300;
-            border-radius: 6px;
-            padding: 24px;
-            margin-bottom: 24px;
-        }
-        .card h2 {
-            color: #ff3300;
-            font-size: 1.1rem;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .step {
-            background: #111;
-            border: 1px solid #2a2a2a;
-            border-radius: 4px;
-            padding: 16px;
-            margin-bottom: 12px;
-        }
-        .step .label {
-            color: #ff9966;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-        .step code {
-            display: block;
-            background: #0a0a0a;
-            border: 1px solid #333;
-            border-radius: 3px;
-            padding: 10px 14px;
-            color: #66ff66;
-            font-size: 0.9rem;
-            margin: 6px 0;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-        .step p {
-            color: #aaa;
-            font-size: 0.85rem;
-            margin-top: 6px;
-        }
-        .badge {
-            display: inline-block;
-            background: #ff3300;
-            color: white;
-            border-radius: 3px;
-            padding: 2px 8px;
-            font-size: 0.75rem;
-            vertical-align: middle;
-        }
-        .regions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 8px;
-        }
-        .region-tag {
-            background: #2a0000;
-            border: 1px solid #ff3300;
-            color: #ff9966;
-            border-radius: 3px;
-            padding: 3px 10px;
-            font-size: 0.8rem;
-        }
-        .note {
-            background: #0d1a0d;
-            border: 1px solid #1a4a1a;
-            border-left: 4px solid #33cc33;
-            border-radius: 4px;
-            padding: 12px 16px;
-            color: #66cc66;
-            font-size: 0.85rem;
-            margin-top: 12px;
-        }
-        .warn {
-            background: #1a1100;
-            border: 1px solid #4a3300;
-            border-left: 4px solid #ffaa00;
-            border-radius: 4px;
-            padding: 12px 16px;
-            color: #ffaa00;
-            font-size: 0.85rem;
-            margin-top: 12px;
-        }
-        footer {
-            text-align: center;
-            color: #555;
-            font-size: 0.8rem;
-            padding: 30px 0 20px;
-            border-top: 1px solid #222;
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>&#128293; BOT FF</h1>
-        <p>Auto Buff Like Free Fire &mdash; Garena Automation Toolkit</p>
-    </header>
+SCHEDULER_CONFIG_FILE = os.path.join(BASE_DIR, 'scheduler_config.json')
+MITM_IDS_FILE = os.path.join(BASE_DIR, 'tools', 'mitm_scripts', 'extracted_ids.txt')
+PROXY_FILE = os.path.join(DATA_DIR, 'proxies.txt')
 
-    <div class="container">
-        <div class="card">
-            <h2>&#9881; Setup &amp; Installation</h2>
-            <div class="step">
-                <div class="label">Install dependencies</div>
-                <code>pip install requests pycryptodome colorama protobuf-decoder</code>
-            </div>
-        </div>
+REGION_URLS = {
+    "VN": "https://clientbp.ggblueshark.com/",
+    "IND": "https://client.ind.freefiremobile.com/",
+    "ID": "https://clientbp.ggblueshark.com/",
+    "BR": "https://client.us.freefiremobile.com/",
+    "ME": "https://clientbp.common.ggbluefox.com/",
+    "TH": "https://clientbp.common.ggbluefox.com/",
+    "BD": "https://clientbp.ggblueshark.com/",
+    "PK": "https://clientbp.ggblueshark.com/",
+    "SG": "https://clientbp.ggblueshark.com/",
+    "NA": "https://client.us.freefiremobile.com/",
+    "SAC": "https://client.us.freefiremobile.com/",
+    "EU": "https://clientbp.ggblueshark.com/",
+    "CIS": "https://clientbp.ggblueshark.com/",
+    "TW": "https://clientbp.ggblueshark.com/",
+}
 
-        <div class="card">
-            <h2>&#128196; Workflow <span class="badge">Step 1 → Step 2</span></h2>
-            <div class="step">
-                <div class="label">Step 1 &mdash; Generate Tokens (reg.py)</div>
-                <code>cd tools/bot
-python reg.py</code>
-                <p>Creates guest accounts &amp; saves tokens to <strong>data/access.txt</strong></p>
-            </div>
-            <div class="step">
-                <div class="label">Step 2 &mdash; Buff Likes (like.py)</div>
-                <code>cd tools/bot
-python like.py</code>
-                <p>Reads tokens from <strong>data/access.txt</strong>, sends Like requests to a target UID</p>
-            </div>
-            <div class="step">
-                <div class="label">Optional &mdash; Level/Rank Bot (lvl.py)</div>
-                <code>cd tools/level_bot
-python lvl.py</code>
-                <p>SOCKS5 proxy that automates match joining for XP/Rank grinding</p>
-            </div>
-        </div>
+task_queues = {}
+task_status = {}
+task_lock = threading.Lock()
 
-        <div class="card">
-            <h2>&#127758; Supported Regions</h2>
-            <div class="regions">
-                <span class="region-tag">VN (Vietnam)</span>
-                <span class="region-tag">IND (India)</span>
-                <span class="region-tag">ID (Indonesia)</span>
-                <span class="region-tag">BR (Brazil)</span>
-                <span class="region-tag">ME (Middle East)</span>
-                <span class="region-tag">TH (Thailand)</span>
-                <span class="region-tag">BD (Bangladesh)</span>
-                <span class="region-tag">PK (Pakistan)</span>
-                <span class="region-tag">SG (Singapore)</span>
-                <span class="region-tag">NA (North America)</span>
-                <span class="region-tag">SAC (South America)</span>
-                <span class="region-tag">EU (Europe)</span>
-                <span class="region-tag">CIS (Russia/CIS)</span>
-                <span class="region-tag">TW (Taiwan)</span>
-            </div>
-        </div>
+scheduler_instance = None
+scheduler_job = None
 
-        <div class="card">
-            <h2>&#128161; Notes</h2>
-            <div class="note">Each token can only like once per day (Garena server limit). Run reg.py first to generate enough tokens for more likes.</div>
-            <div class="warn">This tool interacts with Garena's servers. Use responsibly and at your own risk. Misuse may result in account bans.</div>
-        </div>
-    </div>
 
-    <footer>BOT FF &mdash; Auto Buff Like Free Fire &mdash; Running on Replit</footer>
-</body>
-</html>"""
+def _load_scheduler_config():
+    if os.path.exists(SCHEDULER_CONFIG_FILE):
+        try:
+            with open(SCHEDULER_CONFIG_FILE, 'r') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"enabled": False, "time": "06:00", "uid": "", "region": "VN", "threads": 10, "max_tokens": 0}
 
-@app.route("/")
-def index():
-    return render_template_string(HTML)
 
-@app.route("/health")
+def _save_scheduler_config(cfg):
+    with open(SCHEDULER_CONFIG_FILE, 'w') as f:
+        json.dump(cfg, f, indent=2)
+
+
+def _create_task():
+    task_id = str(uuid.uuid4())[:8]
+    q = queue_module.Queue()
+    with task_lock:
+        task_queues[task_id] = q
+        task_status[task_id] = 'running'
+    return task_id, q
+
+
+def _finish_task(task_id, q, sentinel='[DONE]'):
+    q.put(sentinel)
+    with task_lock:
+        task_status[task_id] = 'done'
+
+
+def _run_in_background(fn, task_id, log_q, *args):
+    def wrapper():
+        try:
+            fn(*args, log_q)
+        except Exception as e:
+            log_q.put(f"[ERROR] {e}")
+        finally:
+            _finish_task(task_id, log_q)
+    t = threading.Thread(target=wrapper, daemon=True)
+    t.start()
+
+
+def _sse_stream(task_id):
+    def generate():
+        q = task_queues.get(task_id)
+        if not q:
+            yield "data: [ERROR] Task không tồn tại\n\n"
+            yield "data: [DONE]\n\n"
+            return
+        while True:
+            try:
+                msg = q.get(timeout=30)
+                safe = msg.replace('\n', '<br>')
+                yield f"data: {safe}\n\n"
+                if msg == '[DONE]':
+                    break
+            except queue_module.Empty:
+                yield "data: [PING]\n\n"
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+        }
+    )
+
+
+def _init_scheduler():
+    global scheduler_instance, scheduler_job
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        scheduler_instance = BackgroundScheduler()
+        scheduler_instance.start()
+        cfg = _load_scheduler_config()
+        if cfg.get('enabled') and cfg.get('uid') and cfg.get('time'):
+            _schedule_job(cfg)
+    except Exception as e:
+        print(f"[Scheduler] Lỗi khởi động: {e}")
+
+
+def _schedule_job(cfg):
+    global scheduler_job
+    if not scheduler_instance:
+        return
+    if scheduler_job:
+        try:
+            scheduler_job.remove()
+        except Exception:
+            pass
+    h, m = cfg['time'].split(':')
+    uid_list = [u.strip() for u in cfg['uid'].split(',') if u.strip()]
+
+    def scheduled_like():
+        task_id, log_q = _create_task()
+        _run_in_background(run_like_bot, task_id, log_q,
+                           uid_list, cfg['region'],
+                           int(cfg.get('threads', 10)),
+                           int(cfg.get('max_tokens', 0)))
+
+    scheduler_job = scheduler_instance.add_job(
+        scheduled_like, 'cron', hour=int(h), minute=int(m)
+    )
+
+
+@app.route('/')
+def dashboard():
+    stats = get_stats()
+    cfg = _load_scheduler_config()
+    return render_template('dashboard.html', stats=stats, scheduler=cfg)
+
+
+@app.route('/like')
+def like_page():
+    return render_template('like.html', regions=list(REGION_URLS.keys()))
+
+
+@app.route('/api/like/start', methods=['POST'])
+def api_like_start():
+    data = request.json or {}
+    uid_raw = data.get('uids', '')
+    uid_list = [u.strip() for u in uid_raw.replace('\n', ',').split(',') if u.strip()]
+    if not uid_list:
+        return jsonify({'error': 'Chưa nhập UID'}), 400
+    for uid in uid_list:
+        if not uid.isdigit():
+            return jsonify({'error': f'UID không hợp lệ: {uid}'}), 400
+
+    region = data.get('region', 'VN').upper()
+    num_threads = max(1, min(int(data.get('threads', 10)), 50))
+    max_tokens = max(0, int(data.get('max_tokens', 0)))
+
+    task_id, log_q = _create_task()
+    _run_in_background(run_like_bot, task_id, log_q, uid_list, region, num_threads, max_tokens)
+    return jsonify({'task_id': task_id})
+
+
+@app.route('/tokens')
+def tokens_page():
+    tokens = read_tokens()
+    return render_template('tokens.html', token_count=len(tokens), regions=list(REGION_URLS.keys()))
+
+
+@app.route('/api/tokens/generate', methods=['POST'])
+def api_tokens_generate():
+    data = request.json or {}
+    num_accounts = max(1, min(int(data.get('num_accounts', 10)), 200))
+    num_threads = max(1, min(int(data.get('threads', 5)), 20))
+    region = data.get('region', 'VN').upper()
+
+    task_id, log_q = _create_task()
+    _run_in_background(run_token_generator, task_id, log_q, num_accounts, num_threads, region)
+    return jsonify({'task_id': task_id})
+
+
+@app.route('/api/tokens/check', methods=['POST'])
+def api_tokens_check():
+    data = request.json or {}
+    num_threads = max(1, min(int(data.get('threads', 10)), 30))
+
+    task_id, log_q = _create_task()
+    _run_in_background(run_token_checker, task_id, log_q, num_threads)
+    return jsonify({'task_id': task_id})
+
+
+@app.route('/api/task/<task_id>/stream')
+def api_task_stream(task_id):
+    return _sse_stream(task_id)
+
+
+@app.route('/proxies')
+def proxies_page():
+    content = ''
+    if os.path.exists(PROXY_FILE):
+        with open(PROXY_FILE, 'r', encoding='utf-8') as f:
+            content = f.read()
+    return render_template('proxies.html', proxy_content=content)
+
+
+@app.route('/api/proxies/save', methods=['POST'])
+def api_proxies_save():
+    data = request.json or {}
+    content = data.get('content', '')
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(PROXY_FILE, 'w', encoding='utf-8') as f:
+        f.write(content)
+    lines = [l for l in content.split('\n') if l.strip()]
+    return jsonify({'success': True, 'count': len(lines)})
+
+
+@app.route('/scheduler')
+def scheduler_page():
+    cfg = _load_scheduler_config()
+    next_run = None
+    if scheduler_job:
+        try:
+            next_run = scheduler_job.next_run_time.strftime('%Y-%m-%d %H:%M') if scheduler_job.next_run_time else None
+        except Exception:
+            pass
+    return render_template('scheduler.html', cfg=cfg, next_run=next_run, regions=list(REGION_URLS.keys()))
+
+
+@app.route('/api/scheduler/save', methods=['POST'])
+def api_scheduler_save():
+    data = request.json or {}
+    cfg = {
+        'enabled': bool(data.get('enabled', False)),
+        'time': data.get('time', '06:00'),
+        'uid': data.get('uid', ''),
+        'region': data.get('region', 'VN').upper(),
+        'threads': max(1, min(int(data.get('threads', 10)), 50)),
+        'max_tokens': max(0, int(data.get('max_tokens', 0))),
+    }
+    _save_scheduler_config(cfg)
+    if cfg['enabled'] and cfg['uid']:
+        _schedule_job(cfg)
+    elif scheduler_job:
+        try:
+            scheduler_job.remove()
+        except Exception:
+            pass
+    return jsonify({'success': True, 'config': cfg})
+
+
+@app.route('/stats')
+def stats_page():
+    logs = read_like_log()
+    parsed = []
+    for line in logs:
+        try:
+            parts = {p.split('=')[0].strip(): p.split('=')[1].strip()
+                     for p in line.replace('[', '').replace(']', '').split('|')
+                     if '=' in p}
+            date_part = line[1:20] if line.startswith('[') else ''
+            parsed.append({
+                'date': date_part,
+                'uid': parts.get('UID', '-'),
+                'region': parts.get('Region', '-'),
+                'ok': parts.get('OK', '0'),
+                'fail': parts.get('Fail', '0'),
+                'total': parts.get('Total', '0'),
+                'time': parts.get('Time', '-'),
+            })
+        except Exception:
+            pass
+    parsed.reverse()
+    stats = get_stats()
+    return render_template('stats.html', logs=parsed, stats=stats)
+
+
+@app.route('/mitm')
+def mitm_page():
+    content = ''
+    if os.path.exists(MITM_IDS_FILE):
+        with open(MITM_IDS_FILE, 'r', encoding='utf-8') as f:
+            content = f.read()
+    return render_template('mitm.html', content=content)
+
+
+@app.route('/api/mitm/save', methods=['POST'])
+def api_mitm_save():
+    data = request.json or {}
+    content = data.get('content', '')
+    os.makedirs(os.path.dirname(MITM_IDS_FILE), exist_ok=True)
+    with open(MITM_IDS_FILE, 'w', encoding='utf-8') as f:
+        f.write(content)
+    lines = [l for l in content.split('\n') if l.strip()]
+    return jsonify({'success': True, 'count': len(lines)})
+
+
+@app.route('/api/stats')
+def api_stats():
+    return jsonify(get_stats())
+
+
+@app.route('/health')
 def health():
-    return jsonify({"status": "ok"})
+    return jsonify({'status': 'ok'})
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+
+if __name__ == '__main__':
+    _init_scheduler()
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
