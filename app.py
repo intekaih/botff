@@ -21,6 +21,13 @@ from lvl import Proxy as LvlProxy
 
 app = Flask(__name__)
 
+@app.after_request
+def add_cors(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
 SCHEDULER_CONFIG_FILE = os.path.join(BASE_DIR, 'scheduler_config.json')
 MITM_IDS_FILE = os.path.join(BASE_DIR, 'tools', 'mitm_scripts', 'extracted_ids.txt')
 MITM_SCRIPT = os.path.join(BASE_DIR, 'tools', 'mitm_scripts', 'auto_extract_mitm.py')
@@ -196,6 +203,31 @@ def api_like_start():
     return jsonify({'task_id': task_id})
 
 
+@app.route('/api/bookmarklet')
+def api_bookmarklet():
+    region = request.args.get('region', 'VN').upper()
+    server = request.host_url.rstrip('/')
+    js = f"""javascript:(function(){{
+var r='{region}',s='',o='';
+document.cookie.split(';').forEach(function(c){{
+  var p=c.trim().split('='),k=p[0],v=decodeURIComponent(p.slice(1).join('='));
+  if(k==='session_key')s=v;
+  if(k==='open_id')o=v;
+}});
+if(!s||!o){{alert('[BOT FF] Không tìm thấy session_key/open_id.\\nHãy đăng nhập Garena rồi thử lại!');return;}}
+alert('[BOT FF] Đang gửi token...\\nRegion: '+r+'\\nOpen ID: '+o);
+fetch('{server}/api/tokens/web_login',{{
+  method:'POST',
+  headers:{{'Content-Type':'application/json'}},
+  body:JSON.stringify({{session_key:s,open_id:o,region:r}})
+}}).then(function(r){{return r.json();}}).then(function(d){{
+  if(d.task_id)alert('[BOT FF] ✅ Đang xử lý! Mở dashboard để xem log.');
+  else alert('[BOT FF] ❌ Lỗi: '+JSON.stringify(d));
+}}).catch(function(e){{alert('[BOT FF] Lỗi kết nối: '+e);}});
+}})();"""
+    return Response(js, mimetype='application/javascript')
+
+
 @app.route('/tokens')
 def tokens_page():
     tokens = read_tokens()
@@ -208,8 +240,10 @@ def tokens_page():
     )
 
 
-@app.route('/api/tokens/web_login', methods=['POST'])
+@app.route('/api/tokens/web_login', methods=['POST', 'OPTIONS'])
 def api_tokens_web_login():
+    if request.method == 'OPTIONS':
+        return '', 204
     data = request.json or {}
     session_key = (data.get('session_key') or '').strip()
     open_id = (data.get('open_id') or '').strip()

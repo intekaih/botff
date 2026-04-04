@@ -68,21 +68,61 @@
     <span class="pill" style="background:rgba(0,204,255,0.15);color:#00ccff;border:1px solid rgba(0,204,255,0.3);">iOS / Android</span>
   </div>
 
-  <!-- Hướng dẫn -->
-  <div style="background:var(--bg4);border-radius:6px;padding:14px;margin-bottom:16px;font-size:0.82rem;line-height:1.9;color:var(--text-dim);">
-    <div style="color:#00ccff;font-weight:bold;margin-bottom:8px;">📋 Hướng dẫn lấy Session Key + Open ID</div>
-    <div><span style="color:var(--red);font-weight:bold;">1.</span> Mở trình duyệt máy tính → vào <code style="color:#99ff99;background:#111;padding:1px 5px;border-radius:3px;">https://sso.garena.com</code></div>
-    <div><span style="color:var(--red);font-weight:bold;">2.</span> Đăng nhập bằng Google / Facebook / Garena</div>
-    <div><span style="color:var(--red);font-weight:bold;">3.</span> Nhấn <kbd style="background:#333;border:1px solid #555;border-radius:3px;padding:1px 4px;">F12</kbd> → tab <strong>Application</strong> → <strong>Cookies</strong> → <code style="color:#99ff99;background:#111;padding:1px 5px;border-radius:3px;">https://sso.garena.com</code></div>
-    <div><span style="color:var(--red);font-weight:bold;">4.</span> Tìm cookie <code style="color:#ffaa00;background:#111;padding:1px 5px;border-radius:3px;">session_key</code> → copy giá trị</div>
-    <div><span style="color:var(--red);font-weight:bold;">5.</span> Tìm cookie <code style="color:#ffaa00;background:#111;padding:1px 5px;border-radius:3px;">open_id</code> → copy giá trị</div>
-    <div><span style="color:var(--red);font-weight:bold;">6.</span> Dán vào ô bên dưới → bấm <strong style="color:#00ccff;">Lấy Token</strong></div>
-    <div style="margin-top:8px;padding:8px;background:#1a1a00;border:1px solid #ffaa00;border-radius:4px;color:#ffaa00;">
-      ⚠️ Nếu <code style="background:#111;padding:1px 4px;border-radius:2px;">sso.garena.com</code> không có cookie cần tìm → thử đăng nhập qua
-      <code style="background:#111;padding:1px 4px;border-radius:2px;">https://account.garena.com</code>
-      rồi xem cookie ở domain <code style="background:#111;padding:1px 4px;border-radius:2px;">.garena.com</code>
+  <!-- BOOKMARKLET - CÁCH NHANH NHẤT -->
+  <div style="background:linear-gradient(135deg,#0d1a2d,#0a1520);border:1px solid rgba(0,204,255,0.4);border-radius:8px;padding:16px;margin-bottom:16px;">
+    <div style="color:#00ccff;font-weight:bold;font-size:0.9rem;margin-bottom:10px;">⚡ Cách nhanh nhất — Bookmarklet (1 click)</div>
+    <div style="font-size:0.81rem;color:var(--text-dim);margin-bottom:12px;line-height:1.7;">
+      Kéo nút bên dưới vào <strong style="color:#fff;">Thanh bookmark</strong> của trình duyệt.
+      Sau đó login Garena → click bookmark đó → token tự động gửi về server.
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;">Chọn region trước:</div>
+        <select id="bm-region" onchange="updateBookmarklet()" style="width:100px;padding:4px 8px;font-size:0.82rem;">
+          {% for r in regions %}
+          <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;">Kéo link này vào bookmark bar:</div>
+        <a id="bookmarklet-link" href="#"
+           style="display:inline-block;padding:8px 18px;background:linear-gradient(135deg,#0044ff,#0088ff);color:#fff;border-radius:6px;font-weight:bold;font-size:0.85rem;text-decoration:none;border:2px solid rgba(0,150,255,0.5);cursor:grab;user-select:none;"
+           title="Kéo vào bookmark bar của trình duyệt">
+          🔑 BOT FF — Lấy Token
+        </a>
+      </div>
+      <div style="font-size:0.78rem;color:var(--text-dim);line-height:1.6;">
+        1. Kéo nút xanh → bookmark bar<br>
+        2. Vào <a href="https://account.garena.com" target="_blank" style="color:#99ff99;">account.garena.com</a> → login<br>
+        3. Click bookmark → done ✅
+      </div>
     </div>
   </div>
+
+  <!-- Hướng dẫn thủ công (thu gọn) -->
+  <details style="margin-bottom:16px;">
+  <summary style="cursor:pointer;font-size:0.82rem;color:var(--text-dim);padding:6px 10px;background:var(--bg4);border-radius:6px;user-select:none;">
+    📋 Hoặc dùng cách thủ công (copy-paste session_key)
+  </summary>
+  <div style="background:var(--bg4);border-radius:0 0 6px 6px;padding:14px;font-size:0.82rem;line-height:1.9;color:var(--text-dim);border-top:1px solid #222;">
+    <div style="color:#00ccff;font-weight:bold;margin-bottom:8px;">📋 Hướng dẫn lấy Session Key + Open ID</div>
+    <div><span style="color:var(--red);font-weight:bold;">1.</span> Mở trình duyệt → vào
+      <a href="https://account.garena.com" target="_blank" style="color:#99ff99;">https://account.garena.com</a>
+      &nbsp;<span style="opacity:0.5;font-size:0.78rem;">(hoặc <a href="https://lc.garena.com" target="_blank" style="color:#99ff99;">lc.garena.com</a>)</span>
+    </div>
+    <div><span style="color:var(--red);font-weight:bold;">2.</span> Đăng nhập bằng <strong>Google</strong> / Facebook / Garena account</div>
+    <div><span style="color:var(--red);font-weight:bold;">3.</span> Nhấn <kbd style="background:#333;border:1px solid #555;border-radius:3px;padding:1px 4px;">F12</kbd> → tab <strong>Application</strong> → <strong>Cookies</strong></div>
+    <div><span style="color:var(--red);font-weight:bold;">4.</span> Chọn domain <code style="color:#99ff99;background:#111;padding:1px 4px;border-radius:2px;">.garena.com</code> (hoặc <code style="color:#99ff99;background:#111;padding:1px 4px;border-radius:2px;">account.garena.com</code>)</div>
+    <div><span style="color:var(--red);font-weight:bold;">5.</span> Tìm <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">session_key</code> và <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">open_id</code> → copy giá trị</div>
+    <div><span style="color:var(--red);font-weight:bold;">6.</span> Dán vào ô bên dưới → bấm <strong style="color:#00ccff;">Lấy Token</strong></div>
+    <div style="margin-top:10px;padding:8px 10px;background:#0d1a0d;border:1px solid #33aa33;border-radius:4px;color:#99dd99;font-size:0.8rem;">
+      💡 <strong>Mẹo:</strong> Nếu không thấy cookie → sau khi login xong, vào
+      <code style="background:#111;padding:1px 4px;border-radius:2px;">https://account.garena.com/</code>
+      rồi mới mở F12 → Application → Cookies
+    </div>
+  </div>
+  </details>
 
   <!-- Tabs phương án -->
   <div style="display:flex;gap:8px;margin-bottom:12px;">
@@ -106,10 +146,11 @@
   <div id="panel-token" style="display:none;margin-bottom:14px;">
     <div style="background:var(--bg4);border-radius:6px;padding:12px;margin-bottom:12px;font-size:0.81rem;color:var(--text-dim);line-height:1.8;">
       <div style="color:#ffaa00;font-weight:bold;margin-bottom:6px;">📡 Lấy Access Token từ Network Tab</div>
-      <div>1. Vào <code style="color:#99ff99;background:#111;padding:1px 4px;border-radius:2px;">https://sso.garena.com</code> → đăng nhập</div>
-      <div>2. F12 → tab <strong>Network</strong> → lọc <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">connect.garena.com</code></div>
-      <div>3. Tìm request <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">token/grant</code> → xem phần <strong>Response</strong></div>
-      <div>4. Copy giá trị <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">access_token</code> và <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">open_id</code></div>
+      <div>1. Vào <a href="https://account.garena.com" target="_blank" style="color:#99ff99;">account.garena.com</a> → <strong>mở F12 trước</strong> → tab <strong>Network</strong></div>
+      <div>2. Đăng nhập bằng Google (để F12 mở trong khi login)</div>
+      <div>3. Sau khi login xong → tìm request có chứa <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">access_token</code> trong Response</div>
+      <div>4. Hoặc lọc Network theo <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">garena</code> → tìm response JSON có <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">"access_token"</code></div>
+      <div>5. Copy giá trị <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">access_token</code> và <code style="color:#ffaa00;background:#111;padding:1px 4px;border-radius:2px;">open_id</code> từ JSON đó</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div class="form-group" style="margin:0;">
@@ -213,6 +254,14 @@ async function startCheck() {
   const {task_id} = await res.json();
   startStream(task_id);
 }
+
+function updateBookmarklet() {
+  const region = document.getElementById('bm-region').value;
+  const server = location.origin;
+  const code = `javascript:(function(){var r='${region}',s='',o='';document.cookie.split(';').forEach(function(c){var p=c.trim().split('='),k=p[0],v=decodeURIComponent(p.slice(1).join('='));if(k==='session_key')s=v;if(k==='open_id')o=v;});if(!s||!o){alert('[BOT FF] Không tìm thấy cookie!\\nHãy đăng nhập account.garena.com rồi thử lại.');return;}if(!confirm('[BOT FF] Gửi token?\\nRegion: '+r+'\\nOpen ID: '+o))return;fetch('${server}/api/tokens/web_login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_key:s,open_id:o,region:r})}).then(function(r){return r.json();}).then(function(d){if(d.task_id)alert('[BOT FF] ✅ Đang xử lý! Mở BOT FF dashboard để xem log.');else alert('[BOT FF] ❌ Lỗi: '+JSON.stringify(d));}).catch(function(e){alert('[BOT FF] Lỗi kết nối: '+e);});})();`;
+  document.getElementById('bookmarklet-link').href = code;
+}
+document.addEventListener('DOMContentLoaded', updateBookmarklet);
 
 let webTab = 'cookie';
 
