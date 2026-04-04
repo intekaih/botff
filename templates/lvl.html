@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block title %}Cày LV{% endblock %}
+{% block topbar_title %}Cày LV — SOCKS5 Proxy Bot{% endblock %}
+{% block breadcrumb %}Cày LV{% endblock %}
+
+{% block content %}
+<div id="alert" class="alert"></div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+  <!-- LEFT: Cấu hình & điều khiển -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <span>⚡</span>
+        <h3>SOCKS5 Proxy — Cày LV</h3>
+        <span id="status-badge" class="pill {% if running %}pill-green{% else %}pill-red{% endif %}">
+          {% if running %}Đang chạy{% else %}Đã tắt{% endif %}
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label>Port lắng nghe</label>
+        <input type="number" id="inp-port" value="{{ port }}" min="1024" max="65535" {% if running %}disabled{% endif %}>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" id="btn-start" onclick="startProxy()" {% if running %}disabled{% endif %} style="flex:1">
+          ▶ Khởi động Proxy
+        </button>
+        <button class="btn btn-secondary" id="btn-stop" onclick="stopProxy()" {% if not running %}disabled{% endif %} style="flex:1">
+          ■ Dừng Proxy
+        </button>
+      </div>
+    </div>
+
+    <!-- Thông tin kết nối -->
+    <div class="card" id="conn-info" style="{% if not running %}opacity:0.5{% endif %}">
+      <div class="card-header">
+        <span>📋</span>
+        <h3>Thông tin kết nối SOCKS5</h3>
+      </div>
+
+      <div style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:16px;font-size:0.85rem;line-height:2.2;">
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px;">
+          <span style="color:var(--text-dim)">Loại Proxy</span>
+          <span style="color:var(--yellow);font-weight:bold">SOCKS5</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px;">
+          <span style="color:var(--text-dim)">Host / IP</span>
+          <span id="disp-host" style="color:var(--green)">— (chưa chạy)</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px;">
+          <span style="color:var(--text-dim)">Port</span>
+          <span id="disp-port" style="color:var(--green)">{{ port if running else '—' }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px;">
+          <span style="color:var(--text-dim)">Username</span>
+          <span id="disp-user" style="color:var(--red)">{{ username }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text-dim)">Password</span>
+          <span id="disp-pass" style="color:var(--red)">{{ password }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Hướng dẫn cài đặt -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <span>📖</span>
+        <h3>Hướng dẫn sử dụng</h3>
+      </div>
+      <div style="font-size:0.83rem;line-height:1.9;color:var(--text-dim);">
+
+        <p style="color:var(--yellow);font-weight:bold;margin-bottom:10px;">Bước 1 — Khởi động Proxy</p>
+        <p>Nhấn <strong style="color:var(--red)">Khởi động Proxy</strong> và ghi nhớ thông tin kết nối bên trái.</p>
+
+        <div style="height:1px;background:var(--border);margin:14px 0;"></div>
+
+        <p style="color:var(--yellow);font-weight:bold;margin-bottom:10px;">Bước 2 — Cấu hình điện thoại</p>
+        <p>Vào <strong>Cài đặt Wi-Fi</strong> → nhấn giữ mạng đang dùng → <strong>Sửa mạng</strong> → <strong>Cài đặt Proxy thủ công</strong>:</p>
+        <div style="background:var(--bg4);border:1px solid var(--border);border-radius:5px;padding:12px;margin:10px 0;font-family:'Courier New',monospace;font-size:0.82rem;">
+          <div>Loại:&nbsp;&nbsp;&nbsp; <span style="color:var(--green)">SOCKS5</span></div>
+          <div>Host:&nbsp;&nbsp;&nbsp; <span style="color:var(--green)" id="guide-host">IP máy chủ (xem bên trái)</span></div>
+          <div>Port:&nbsp;&nbsp;&nbsp; <span style="color:var(--green)" id="guide-port">{{ port }}</span></div>
+          <div>User:&nbsp;&nbsp;&nbsp; <span style="color:var(--red)">Mtuandz</span></div>
+          <div>Pass:&nbsp;&nbsp;&nbsp; <span style="color:var(--red)">Mtuandz</span></div>
+        </div>
+
+        <div style="height:1px;background:var(--border);margin:14px 0;"></div>
+
+        <p style="color:var(--yellow);font-weight:bold;margin-bottom:10px;">Bước 3 — Vào game & bắt đầu</p>
+        <p>Mở Free Fire → vào <strong>Ranked Mode</strong> → tìm trận. Bot sẽ tự động:</p>
+        <ul style="margin-left:16px;margin-top:8px;">
+          <li>Capture StartData khi bạn bấm tìm trận lần đầu</li>
+          <li>Gửi StopData để kết thúc sớm mỗi trận</li>
+          <li>Tự động tái queue trận tiếp theo</li>
+          <li>Liên tục spam StartData trong trận để cày EXP</li>
+        </ul>
+
+        <div style="height:1px;background:var(--border);margin:14px 0;"></div>
+
+        <div style="background:rgba(255,170,0,0.08);border:1px solid rgba(255,170,0,0.3);border-radius:5px;padding:12px;">
+          <p style="color:var(--yellow);font-weight:bold;margin-bottom:6px;">⚠ Lưu ý quan trọng</p>
+          <ul style="margin-left:16px;font-size:0.81rem;line-height:1.8;">
+            <li>Proxy chạy trên server — điện thoại phải cùng mạng <strong>hoặc</strong> server phải có IP public</li>
+            <li>Cần kết nối port <strong>39698</strong> (game server FF) qua proxy</li>
+            <li>Bot hoạt động tự động — không cần giữ app mở sau khi vào trận</li>
+            <li>Dùng Ranked Mode để cày EXP hiệu quả nhất</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Status realtime -->
+<div class="card" style="margin-top:0;">
+  <div class="card-header">
+    <span>📡</span>
+    <h3>Trạng thái realtime</h3>
+    <span id="total-games-badge" class="badge" style="background:var(--bg4);color:var(--text);">Trận: 0</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-status" style="font-size:1.2rem;">{{ '🟢 Bật' if running else '🔴 Tắt' }}</div>
+      <div class="stat-label">Trạng thái Proxy</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-port">{{ port if running else '—' }}</div>
+      <div class="stat-label">Port đang dùng</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-games" style="color:var(--yellow)">—</div>
+      <div class="stat-label">Trận đã xử lý</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-socket" style="color:var(--blue)">—</div>
+      <div class="stat-label">Game socket</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let pollingInterval = null;
+
+  function showAlert(msg, type) {
+    const el = document.getElementById('alert');
+    el.className = 'alert alert-' + type + ' show';
+    el.textContent = msg;
+    setTimeout(() => { el.classList.remove('show'); }, 4000);
+  }
+
+  function updateUI(running, port, username, password) {
+    document.getElementById('status-badge').className = 'pill ' + (running ? 'pill-green' : 'pill-red');
+    document.getElementById('status-badge').textContent = running ? 'Đang chạy' : 'Đã tắt';
+    document.getElementById('stat-status').textContent = running ? '🟢 Bật' : '🔴 Tắt';
+    document.getElementById('stat-port').textContent = running ? port : '—';
+    document.getElementById('btn-start').disabled = running;
+    document.getElementById('btn-stop').disabled = !running;
+    document.getElementById('inp-port').disabled = running;
+    document.getElementById('conn-info').style.opacity = running ? '1' : '0.5';
+
+    if (running) {
+      // Resolve public domain for display
+      const host = window.location.hostname;
+      document.getElementById('disp-host').textContent = host;
+      document.getElementById('disp-port').textContent = port;
+      document.getElementById('disp-user').textContent = username;
+      document.getElementById('disp-pass').textContent = password;
+      document.getElementById('guide-host').textContent = host;
+      document.getElementById('guide-port').textContent = port;
+    } else {
+      document.getElementById('disp-host').textContent = '— (chưa chạy)';
+      document.getElementById('disp-port').textContent = '—';
+    }
+  }
+
+  async function startProxy() {
+    const port = parseInt(document.getElementById('inp-port').value) || 7777;
+    document.getElementById('btn-start').disabled = true;
+    document.getElementById('btn-start').innerHTML = '<span class="spinner"></span> Đang khởi động...';
+
+    try {
+      const r = await fetch('/api/lvl/start', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({port})
+      });
+      const data = await r.json();
+      if (data.success) {
+        showAlert('✅ ' + data.message, 'success');
+        updateUI(true, data.port, data.username, data.password);
+        startPolling();
+      } else {
+        showAlert('❌ ' + data.message, 'error');
+        document.getElementById('btn-start').disabled = false;
+      }
+    } catch(e) {
+      showAlert('❌ Lỗi kết nối: ' + e, 'error');
+      document.getElementById('btn-start').disabled = false;
+    }
+    document.getElementById('btn-start').innerHTML = '▶ Khởi động Proxy';
+  }
+
+  async function stopProxy() {
+    document.getElementById('btn-stop').disabled = true;
+    try {
+      const r = await fetch('/api/lvl/stop', {method: 'POST'});
+      const data = await r.json();
+      if (data.success) {
+        showAlert('⏹ ' + data.message, 'success');
+        updateUI(false, null, 'Mtuandz', 'Mtuandz');
+        stopPolling();
+        document.getElementById('stat-games').textContent = '—';
+        document.getElementById('stat-socket').textContent = '—';
+        document.getElementById('total-games-badge').textContent = 'Trận: 0';
+      } else {
+        showAlert('❌ ' + data.message, 'error');
+      }
+    } catch(e) {
+      showAlert('❌ Lỗi: ' + e, 'error');
+    }
+    document.getElementById('btn-stop').disabled = false;
+  }
+
+  function startPolling() {
+    if (pollingInterval) return;
+    pollingInterval = setInterval(pollStatus, 3000);
+  }
+
+  function stopPolling() {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+
+  async function pollStatus() {
+    try {
+      const r = await fetch('/api/lvl/status');
+      const data = await r.json();
+      if (!data.running && pollingInterval) {
+        updateUI(false, null, 'Mtuandz', 'Mtuandz');
+        stopPolling();
+        showAlert('⚠ Proxy đã dừng bất ngờ', 'error');
+      }
+    } catch(e) {}
+  }
+
+  // Auto start polling if already running
+  {% if running %}
+  startPolling();
+  updateUI(true, {{ port }}, '{{ username }}', '{{ password }}');
+  {% endif %}
+</script>
+{% endblock %}

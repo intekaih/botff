@@ -4,6 +4,7 @@ import json
 import time
 import uuid
 import threading
+import socket
 import queue as queue_module
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, Response, stream_with_context
@@ -13,6 +14,9 @@ from bot_runner import (
     run_like_bot, run_token_generator, run_token_checker,
     DATA_DIR, BASE_DIR
 )
+
+sys.path.insert(0, os.path.join(BASE_DIR, 'tools', 'level_bot'))
+from lvl import Proxy as LvlProxy
 
 app = Flask(__name__)
 
@@ -43,6 +47,12 @@ task_lock = threading.Lock()
 
 scheduler_instance = None
 scheduler_job = None
+
+# LVL Bot state
+lvl_proxy_instance = None
+lvl_proxy_thread = None
+lvl_proxy_port = 7777
+lvl_proxy_lock = threading.Lock()
 
 
 def _load_scheduler_config():
@@ -323,6 +333,85 @@ def api_stats():
 @app.route('/health')
 def health():
     return jsonify({'status': 'ok'})
+
+
+# ── LVL BOT ────────────────────────────────────────────────────────────────
+
+def _lvl_is_running():
+    """Kiểm tra xem SOCKS5 proxy có đang chạy không."""
+    global lvl_proxy_thread
+    return lvl_proxy_thread is not None and lvl_proxy_thread.is_alive()
+
+
+def _lvl_port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('127.0.0.1', port)) == 0
+
+
+@app.route('/lvl')
+def lvl_page():
+    running = _lvl_is_running()
+    return render_template('lvl.html',
+                           running=running,
+                           port=lvl_proxy_port,
+                           username=lvl_proxy_instance.username if lvl_proxy_instance else 'Mtuandz',
+                           password=lvl_proxy_instance.password if lvl_proxy_instance else 'Mtuandz')
+
+
+@app.route('/api/lvl/start', methods=['POST'])
+def api_lvl_start():
+    global lvl_proxy_instance, lvl_proxy_thread, lvl_proxy_port
+    with lvl_proxy_lock:
+        if _lvl_is_running():
+            return jsonify({'success': False, 'message': 'Proxy đã đang chạy'})
+
+        data = request.json or {}
+        port = int(data.get('port', 7777))
+
+        if _lvl_port_in_use(port):
+            return jsonify({'success': False, 'message': f'Port {port} đã được dùng bởi tiến trình khác'})
+
+        lvl_proxy_port = port
+        lvl_proxy_instance = LvlProxy()
+
+        def run_proxy():
+            try:
+                lvl_proxy_instance.run(host='0.0.0.0', port=port)
+            except Exception as e:
+                print(f'[LVL BOT] Lỗi: {e}')
+
+        lvl_proxy_thread = threading.Thread(target=run_proxy, daemon=True)
+        lvl_proxy_thread.start()
+
+        time.sleep(0.8)
+        if _lvl_is_running():
+            return jsonify({'success': True, 'message': f'SOCKS5 Proxy đã khởi động tại port {port}',
+                            'port': port, 'username': lvl_proxy_instance.username,
+                            'password': lvl_proxy_instance.password})
+        else:
+            return jsonify({'success': False, 'message': 'Không thể khởi động proxy'})
+
+
+@app.route('/api/lvl/stop', methods=['POST'])
+def api_lvl_stop():
+    global lvl_proxy_instance, lvl_proxy_thread
+    with lvl_proxy_lock:
+        if not _lvl_is_running():
+            return jsonify({'success': False, 'message': 'Proxy chưa chạy'})
+        lvl_proxy_thread = None
+        lvl_proxy_instance = None
+        return jsonify({'success': True, 'message': 'Đã dừng (thread daemon sẽ tự thoát)'})
+
+
+@app.route('/api/lvl/status')
+def api_lvl_status():
+    running = _lvl_is_running()
+    return jsonify({
+        'running': running,
+        'port': lvl_proxy_port if running else None,
+        'username': lvl_proxy_instance.username if lvl_proxy_instance else 'Mtuandz',
+        'password': lvl_proxy_instance.password if lvl_proxy_instance else 'Mtuandz',
+    })
 
 
 if __name__ == '__main__':

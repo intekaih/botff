@@ -9,11 +9,13 @@ SOCKS_VERSION = 5
 # Global state
 MainS = None
 StartData = None
-StopData = b'\x03\x15\x00\x00\x00\x10\t\x1e\xb7N\xef9\xb7WN5\x96\x02\xb0g\x0c\xa8'  # Thêm lại StopData như yêu cầu
+StopData = b'\x03\x15\x00\x00\x00\x10\t\x1e\xb7N\xef9\xb7WN5\x96\x02\xb0g\x0c\xa8'
 Increase = True
 TotalGame = 0
 active_lvl_thread = None
 lvl_lock = threading.Lock()
+state_lock = threading.Lock()  # Lock riêng cho state variables
+
 
 class Proxy:
     def __init__(self):
@@ -63,7 +65,7 @@ class Proxy:
                 bind_address = remote.getsockname()
                 reply = b'\x05\x00\x00\x01' + socket.inet_aton(bind_address[0]) + bind_address[1].to_bytes(2, 'big')
                 conn.sendall(reply)
-            except:
+            except Exception:
                 conn.sendall(b'\x05\x05\x00\x01\x00\x00\x00\x00\x00\x00')
                 conn.close()
                 return
@@ -87,7 +89,7 @@ class Proxy:
             else:
                 conn.sendall(bytes([version, 0xFF]))
                 return False
-        except:
+        except Exception:
             return False
 
     def exchange_loop(self, client, remote, port):
@@ -108,8 +110,10 @@ class Proxy:
                             return
 
                         if sock is client:
+                            # FIX: Capture StartData với lock để tránh race condition
                             if len(data) >= 400 and data[:2].hex() == "0301":
-                                StartData = data
+                                with state_lock:
+                                    StartData = data
                                 print("Đã capture StartData mới")
                             remote.sendall(data)
 
@@ -119,24 +123,35 @@ class Proxy:
                             if data_hex[:4] == "0300" and len(data) >= 50 and Increase:
                                 if b"Ranked Mode" in data:
                                     print("=== Out Lobby → Auto queue trận mới ngay ===")
-                                    TotalGame = 0
-                                    Increase = True
-                                    # Auto gửi StartData để queue ranked liên tục
-                                    threading.Thread(target=self.auto_queue).start()
+                                    with state_lock:
+                                        TotalGame = 0
+                                        Increase = True
+                                    threading.Thread(target=self.auto_queue, daemon=True).start()
                                 else:
-                                    TotalGame += 1
-                                    print(f"=== Bắt đầu trận mới: {TotalGame} ===")
-                                    if active_lvl_thread is None or not active_lvl_thread.is_alive():
-                                        active_lvl_thread = threading.Thread(target=self.lvl_up, args=(TotalGame,))
-                                        active_lvl_thread.start()
-                                    threading.Thread(target=self.check_start, args=(TotalGame,)).start()
+                                    with state_lock:
+                                        TotalGame += 1
+                                        current = TotalGame
+                                        # FIX: Set Increase=False khi trận bắt đầu để tránh trigger lặp
+                                        Increase = False
 
+                                    print(f"=== Bắt đầu trận mới: {current} ===")
+                                    if active_lvl_thread is None or not active_lvl_thread.is_alive():
+                                        active_lvl_thread = threading.Thread(
+                                            target=self.lvl_up, args=(current,), daemon=True
+                                        )
+                                        active_lvl_thread.start()
+                                    threading.Thread(
+                                        target=self.check_start, args=(current,), daemon=True
+                                    ).start()
+
+                            # Khi phát hiện level up → cho phép detect trận tiếp
                             if data_hex[:4] == "1200" and b"lv" in data:
-                                Increase = True
+                                with state_lock:
+                                    Increase = True
                                 print("Level up hoàn tất → Cho phép tăng tiếp")
 
                             client.sendall(data)
-                    except:
+                    except Exception:
                         return
         except Exception:
             pass
@@ -145,36 +160,52 @@ class Proxy:
             remote.close()
 
     def safe_send(self, data):
+        """Gửi data đến MainS socket an toàn. Trả về True nếu thành công."""
+        # FIX: Kiểm tra data không None trước khi gửi
+        if data is None:
+            print("[safe_send] Không có data để gửi (StartData chưa được capture)")
+            return False
         try:
             with lvl_lock:
                 if MainS:
                     MainS.sendall(data)
                     return True
-        except:
-            print("Socket đã chết → không gửi được")
+                else:
+                    print("[safe_send] MainS chưa sẵn sàng")
+                    return False
+        except Exception as e:
+            print(f"Socket đã chết → không gửi được: {e}")
             return False
-        return False
 
     def auto_queue(self):
         """Khi out lobby → auto gửi StartData vài lần để queue ranked ngay"""
-        time.sleep(3 + random.uniform(0, 2))  # Delay nhỏ tránh spam ngay lập tức
-        for i in range(3):  # Gửi 3 lần như người thật bấm tìm trận
-            if self.safe_send(StartData):
+        time.sleep(3 + random.uniform(0, 2))
+        for i in range(3):
+            # FIX: Lấy snapshot StartData trong lock để tránh race condition
+            with state_lock:
+                snap = StartData
+            if snap is None:
+                print("[auto_queue] StartData chưa có → bỏ qua")
+                break
+            if self.safe_send(snap):
                 print(f"Auto queue lần {i+1}/3")
                 time.sleep(1 + random.uniform(0, 1))
             else:
                 break
 
     def lvl_up(self, current_match):
-        global MainS, StartData, StopData, TotalGame, active_lvl_thread
-        if not StartData:
+        global active_lvl_thread
+
+        # FIX: Kiểm tra StartData tồn tại trước khi bắt đầu
+        with state_lock:
+            snap_start = StartData
+        if not snap_start:
             print("Không có StartData → bỏ qua lvl_up")
             active_lvl_thread = None
             return
 
         print(f"Level up trận {current_match} bắt đầu (có gửi StopData)")
 
-        # Thêm lại gửi StopData (nhẹ nhàng, ít lần, có delay + random)
         for i in range(4):
             if self.safe_send(StopData):
                 print(f"Gửi StopData lần {i+1}/4")
@@ -183,18 +214,21 @@ class Proxy:
                 active_lvl_thread = None
                 return
 
-        time.sleep(12 + random.uniform(0, 4))  # Chờ load trận
+        time.sleep(12 + random.uniform(0, 4))
 
-        if self.safe_send(StartData):
+        with state_lock:
+            snap_start = StartData
+        if self.safe_send(snap_start):
             print("Đã gửi packet start đầu tiên")
 
-        # Spam nhẹ StartData
         spam_count = 0
         max_spam = 18
         while TotalGame == current_match and spam_count < max_spam:
-            delay = random.uniform(20, 30)  # Delay rất lớn để an toàn
+            delay = random.uniform(20, 30)
             time.sleep(delay)
-            if self.safe_send(StartData):
+            with state_lock:
+                snap_start = StartData
+            if self.safe_send(snap_start):
                 spam_count += 1
                 print(f"Spam StartData lần {spam_count}/{max_spam} trận {current_match}")
             else:
@@ -207,16 +241,23 @@ class Proxy:
         time.sleep(8)
         if current_match == TotalGame:
             print("Trận chưa start → Auto fix")
-            self.safe_send(StartData)
+            # FIX: Lấy snapshot StartData an toàn
+            with state_lock:
+                snap = StartData
+            self.safe_send(snap)
 
     def run(self, host="0.0.0.0", port=7777):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((host, port))
         s.listen()
-        print(f"Proxy chạy tại {host}:{port} - Đã thêm lại StopData + Auto queue khi out lobby")
+        print(f"[LVL BOT] SOCKS5 Proxy chạy tại {host}:{port}")
+        print(f"[LVL BOT] Username: {self.username} | Password: {self.password}")
+        print(f"[LVL BOT] Cấu hình game SOCKS5: {host}:{port} với tài khoản trên")
+        print(f"[LVL BOT] Đang chờ kết nối từ game...")
         while True:
             conn, addr = s.accept()
+            print(f"[LVL BOT] Kết nối mới từ {addr}")
             threading.Thread(target=self.handle_client, args=(conn,), daemon=True).start()
 
 
