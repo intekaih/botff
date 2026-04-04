@@ -342,7 +342,7 @@ def api_mitm_start():
             mitm_process = subprocess.Popen(
                 ['mitmdump', '-s', MITM_SCRIPT, '--listen-port', '8080',
                  '--set', 'ssl_insecure=true'],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 cwd=os.path.join(BASE_DIR, 'tools', 'mitm_scripts')
             )
             return jsonify({'success': True, 'msg': 'mitmproxy đã khởi động (port 8080)'})
