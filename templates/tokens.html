@@ -123,52 +123,86 @@
   <!-- BƯỚC 3: Extract — FF thường vs FF Max -->
   <div style="margin-bottom:14px;">
     <div style="color:#00ffb4;font-size:0.84rem;font-weight:bold;margin-bottom:8px;">
-      🔍 Bước 3 — Extract token
-      <span style="font-weight:normal;font-size:0.78rem;color:#aaa;margin-left:8px;">(script tự động kiểm tra cả FF thường + FF Max)</span>
+      🔍 Bước 3 — Extract token (kiểm tra FF thường + FF Max)
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:0.79rem;margin-bottom:8px;">
-      <div style="background:#0a1f0a;border:1px solid rgba(0,255,180,0.25);border-radius:5px;padding:7px 10px;color:#99ffcc;">
-        📦 <strong>Free Fire thường:</strong><br>
-        <code>com.dts.freefireth</code>
-      </div>
-      <div style="background:#0a1f0a;border:1px solid rgba(0,255,180,0.25);border-radius:5px;padding:7px 10px;color:#99ffcc;">
-        📦 <strong>Free Fire MAX:</strong><br>
-        <code>com.dts.freefiremax</code>
-      </div>
+
+    <!-- Cảnh báo Windows CMD -->
+    <div style="background:#1a1000;border:1px solid rgba(255,170,0,0.35);border-radius:6px;padding:10px 12px;font-size:0.8rem;color:#ffcc66;margin-bottom:10px;line-height:1.8;">
+      ⚠️ <strong>Windows CMD:</strong> Multi-line script không hoạt động với MagiskSU.
+      Dùng <strong>Cách A</strong> (push file) bên dưới — hoạt động trên mọi OS.
     </div>
-    <div class="log-box" style="font-size:0.8rem;line-height:1.85;padding:13px;">
-<span style="color:#00ffb4;"># ── Script All-in-One: tự detect FF thường + FF Max ──</span>
-adb shell su -c "
+
+    <!-- Tabs: Cách A và Cách B -->
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button onclick="adbExtTab('a')" id="ext-tab-a"
+              style="padding:6px 14px;border-radius:5px;border:1px solid rgba(0,255,180,0.4);background:rgba(0,255,180,0.15);color:#00ffb4;font-size:0.8rem;cursor:pointer;">
+        📄 Cách A — Push file (mọi OS)
+      </button>
+      <button onclick="adbExtTab('b')" id="ext-tab-b"
+              style="padding:6px 14px;border-radius:5px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#888;font-size:0.8rem;cursor:pointer;">
+        📡 Cách B — Logcat realtime
+      </button>
+    </div>
+
+    <!-- Cách A: Push script file -->
+    <div id="ext-content-a">
+      <div style="font-size:0.8rem;color:#aaffdd;margin-bottom:8px;line-height:1.7;">
+        <strong>Tạo file <code>ff_extract.sh</code></strong> trên máy tính với nội dung sau,
+        rồi push lên điện thoại và chạy:
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+        <div style="font-size:0.77rem;color:#888;">📋 Nội dung file <code>ff_extract.sh</code>:</div>
+        <a href="/download/ff_extract.sh" download
+           style="padding:4px 12px;border-radius:5px;border:1px solid rgba(0,255,180,0.4);background:rgba(0,255,180,0.1);color:#00ffb4;font-size:0.77rem;text-decoration:none;">
+          ⬇ Tải file về luôn
+        </a>
+      </div>
+      <div class="log-box" style="font-size:0.8rem;line-height:1.8;padding:12px;margin-bottom:8px;">#!/system/bin/sh
 for PKG in com.dts.freefireth com.dts.freefiremax; do
-  DIR=/data/data/\$PKG
-  if [ -d \"\$DIR\" ]; then
-    echo \"\"
-    echo \"==== \$PKG ====\"
-    echo \"-- SharedPreferences --\"
-    find \$DIR/shared_prefs -name '*.xml' 2>/dev/null | while read f; do
-      if grep -qi 'access_token\|open_id\|garena_token\|session' \"\$f\"; then
-        echo \"[FILE] \$f\"
-        grep -i 'access_token\|open_id\|garena_token' \"\$f\" 2>/dev/null
+  DIR=/data/data/$PKG
+  if [ -d "$DIR" ]; then
+    echo ""
+    echo "==== $PKG ===="
+    find $DIR/shared_prefs -name '*.xml' 2>/dev/null | while read f; do
+      if grep -qi 'access_token\|open_id\|garena_token' "$f" 2>/dev/null; then
+        echo "[FILE] $f"
+        grep -i 'access_token\|open_id\|garena_token' "$f" 2>/dev/null
       fi
     done
-    echo \"-- Files JSON --\"
-    find \$DIR/files -name '*.json' 2>/dev/null | head -5
   else
-    echo \"\$PKG: not installed\"
+    echo "$PKG: not installed"
   fi
-done
-"
+done</div>
+      <div style="font-size:0.77rem;color:#888;margin-bottom:5px;">▶️ Sau khi lưu file, chạy 3 lệnh này trong CMD / Terminal:</div>
+      <div class="log-box" style="font-size:0.81rem;line-height:1.9;padding:12px;">
+<span style="color:#00ffb4;"># 1. Push script lên điện thoại</span>
+adb push ff_extract.sh /sdcard/ff_extract.sh
 
-<span style="color:#aaa;"># ── Nếu muốn pull về máy để xem offline ──</span>
-adb shell su -c "
-  cp -r /data/data/com.dts.freefireth/shared_prefs /sdcard/ff_prefs 2>/dev/null
-  cp -r /data/data/com.dts.freefiremax/shared_prefs /sdcard/ffmax_prefs 2>/dev/null
-"
+<span style="color:#00ffb4;"># 2. Chạy với quyền root</span>
+adb shell su -c "sh /sdcard/ff_extract.sh"
+
+<span style="color:#00ffb4;"># 3. (Tuỳ chọn) Kéo toàn bộ SharedPrefs về máy để xem file</span>
+adb shell su -c "cp -r /data/data/com.dts.freefireth/shared_prefs /sdcard/ff_prefs 2>/dev/null; cp -r /data/data/com.dts.freefiremax/shared_prefs /sdcard/ffmax_prefs 2>/dev/null"
 adb pull /sdcard/ff_prefs ./ff_dump
-adb pull /sdcard/ffmax_prefs ./ffmax_dump
+adb pull /sdcard/ffmax_prefs ./ffmax_dump</div>
+    </div>
 
-<span style="color:#aaa;"># ── Logcat: bắt token khi đang mở game (mở game trước, chạy lệnh này) ──</span>
-adb logcat -v time | grep -i "access_token\|open_id\|token_grant\|GarenaSDK"</div>
+    <!-- Cách B: Logcat -->
+    <div id="ext-content-b" style="display:none;">
+      <div style="font-size:0.8rem;color:#aaffdd;margin-bottom:8px;line-height:1.7;">
+        <strong>Mở game trước</strong>, rồi chạy lệnh logcat này — bắt token ngay khi game gửi lên server:
+      </div>
+      <div class="log-box" style="font-size:0.81rem;line-height:1.9;padding:12px;">
+<span style="color:#00ffb4;"># Windows CMD:</span>
+adb logcat -v time | findstr /i "access_token open_id token_grant"
+
+<span style="color:#00ffb4;"># Linux / macOS / PowerShell:</span>
+adb logcat -v time | grep -i "access_token\|open_id\|token_grant"
+
+<span style="color:#aaa;"># Lưu log ra file (Windows):</span>
+adb logcat -v time > ff_log.txt
+<span style="color:#aaa;"># Sau đó mở ff_log.txt và tìm access_token</span></div>
+    </div>
   </div>
 
   <!-- BƯỚC 4: Paste token + Submit -->
@@ -250,6 +284,18 @@ function startStream(task_id) {
     document.getElementById('log-badge').style.display = 'none';
     appendLog('[!] Stream bị gián đoạn.\n');
   };
+}
+
+function adbExtTab(name) {
+  ['a','b'].forEach(t => {
+    const btn  = document.getElementById('ext-tab-' + t);
+    const cont = document.getElementById('ext-content-' + t);
+    const on   = (t === name);
+    cont.style.display  = on ? '' : 'none';
+    btn.style.border    = on ? '1px solid rgba(0,255,180,0.4)' : '1px solid rgba(255,255,255,0.15)';
+    btn.style.background= on ? 'rgba(0,255,180,0.15)' : 'transparent';
+    btn.style.color     = on ? '#00ffb4' : '#888';
+  });
 }
 
 async function startAdbToken() {

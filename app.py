@@ -579,6 +579,16 @@ def mitm_page():
     return render_template('mitm.html', content=content)
 
 
+@app.route('/download/ff_extract.sh')
+def download_ff_extract():
+    """Tải file shell script extract token qua ADB"""
+    from flask import send_from_directory
+    adb_dir = os.path.join(BASE_DIR, 'tools', 'adb')
+    return send_from_directory(adb_dir, 'ff_extract.sh',
+                               as_attachment=True,
+                               mimetype='text/plain')
+
+
 @app.route('/api/mitm/status')
 def api_mitm_status():
     global mitm_process
