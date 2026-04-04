@@ -10,7 +10,7 @@ from datetime import datetime
 from flask import Flask, render_template, jsonify, request, Response, stream_with_context
 
 from bot_runner import (
-    get_stats, read_tokens, read_proxies, read_like_log,
+    get_stats, read_tokens, read_real_tokens, read_proxies, read_like_log,
     run_like_bot, run_token_generator, run_token_checker,
     DATA_DIR, BASE_DIR
 )
@@ -195,7 +195,13 @@ def api_like_start():
 @app.route('/tokens')
 def tokens_page():
     tokens = read_tokens()
-    return render_template('tokens.html', token_count=len(tokens), regions=list(REGION_URLS.keys()))
+    real_tokens = read_real_tokens()
+    return render_template(
+        'tokens.html',
+        token_count=len(tokens),
+        token_real_count=len(real_tokens),
+        regions=list(REGION_URLS.keys())
+    )
 
 
 @app.route('/api/tokens/generate', methods=['POST'])

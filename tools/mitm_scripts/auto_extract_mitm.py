@@ -20,7 +20,7 @@ class FreeFireTokenExtractor:
         self.script_dir = os.path.dirname(os.path.abspath(__file__))
         self.bot_dir = os.path.join(os.path.dirname(self.script_dir), "bot")
         self.data_dir = os.path.join(self.bot_dir, "data")
-        self.access_file = os.path.join(self.data_dir, "access.txt")
+        self.access_file = os.path.join(self.data_dir, "access_real.txt")
         self.getinfo_script = os.path.join(self.bot_dir, "get_info.py")
 
         # Đảm bảo thư mục data tồn tại
@@ -73,7 +73,7 @@ class FreeFireTokenExtractor:
 
                     logging.info(f"[+] Lấy được UID tài khoản: {uid}")
 
-                    # 1. Lưu JWT Token vào file access.txt
+                    # 1. Lưu JWT Token vào file access_real.txt (acc thật)
                     with open(self.access_file, "a", encoding="utf-8") as f:
                         f.write(f"{jwt_token}\n")
                     logging.info(

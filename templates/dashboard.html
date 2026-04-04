@@ -6,23 +6,27 @@
 {% block content %}
 <div class="stats-grid">
   <div class="stat-card">
-    <div class="stat-value">{{ stats.token_count }}</div>
-    <div class="stat-label">🔑 Token sẵn sàng</div>
+    <div class="stat-value" id="stat-token-bot">{{ stats.token_count }}</div>
+    <div class="stat-label">🤖 Token Bot</div>
   </div>
   <div class="stat-card">
-    <div class="stat-value">{{ stats.proxy_count }}</div>
+    <div class="stat-value" id="stat-token-real" style="color:#00ccff">{{ stats.token_real_count }}</div>
+    <div class="stat-label">👤 Token Acc Thật</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="stat-proxy">{{ stats.proxy_count }}</div>
     <div class="stat-label">🌐 Proxy đang dùng</div>
   </div>
   <div class="stat-card">
-    <div class="stat-value">{{ stats.total_runs }}</div>
+    <div class="stat-value" id="stat-runs">{{ stats.total_runs }}</div>
     <div class="stat-label">🚀 Lần chạy tổng</div>
   </div>
   <div class="stat-card">
-    <div class="stat-value" style="color:var(--green)">{{ stats.total_ok }}</div>
+    <div class="stat-value" style="color:var(--green)" id="stat-ok">{{ stats.total_ok }}</div>
     <div class="stat-label">✅ Like thành công</div>
   </div>
   <div class="stat-card">
-    <div class="stat-value" style="color:#ff6666">{{ stats.total_fail }}</div>
+    <div class="stat-value" style="color:#ff6666" id="stat-fail">{{ stats.total_fail }}</div>
     <div class="stat-label">❌ Like thất bại</div>
   </div>
 </div>
@@ -81,11 +85,12 @@
 setInterval(async () => {
   const r = await fetch('/api/stats');
   const d = await r.json();
-  document.querySelectorAll('.stat-value')[0].textContent = d.token_count;
-  document.querySelectorAll('.stat-value')[1].textContent = d.proxy_count;
-  document.querySelectorAll('.stat-value')[2].textContent = d.total_runs;
-  document.querySelectorAll('.stat-value')[3].textContent = d.total_ok;
-  document.querySelectorAll('.stat-value')[4].textContent = d.total_fail;
+  document.getElementById('stat-token-bot').textContent  = d.token_count;
+  document.getElementById('stat-token-real').textContent = d.token_real_count;
+  document.getElementById('stat-proxy').textContent      = d.proxy_count;
+  document.getElementById('stat-runs').textContent       = d.total_runs;
+  document.getElementById('stat-ok').textContent         = d.total_ok;
+  document.getElementById('stat-fail').textContent       = d.total_fail;
 }, 5000);
 </script>
 {% endblock %}

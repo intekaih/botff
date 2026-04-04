@@ -19,12 +19,36 @@ def _ensure_data_dir():
 
 
 def read_tokens():
+    """Đọc token acc bot (access.txt)"""
     _ensure_data_dir()
     token_file = os.path.join(DATA_DIR, 'access.txt')
     if not os.path.exists(token_file):
         return []
     with open(token_file, 'r', encoding='utf-8') as f:
         return [line.strip() for line in f if line.strip()]
+
+
+def read_real_tokens():
+    """Đọc token acc thật từ MITM (access_real.txt)"""
+    _ensure_data_dir()
+    token_file = os.path.join(DATA_DIR, 'access_real.txt')
+    if not os.path.exists(token_file):
+        return []
+    with open(token_file, 'r', encoding='utf-8') as f:
+        return [line.strip() for line in f if line.strip()]
+
+
+def read_all_tokens():
+    """Đọc tất cả token từ cả 2 file (bot + thật), không trùng lặp"""
+    bot = read_tokens()
+    real = read_real_tokens()
+    seen = set()
+    merged = []
+    for t in (real + bot):   # ưu tiên token thật trước
+        if t not in seen:
+            seen.add(t)
+            merged.append(t)
+    return merged
 
 
 def read_proxies():
@@ -45,6 +69,7 @@ def read_like_log():
 
 def get_stats():
     tokens = read_tokens()
+    real_tokens = read_real_tokens()
     proxies = read_proxies()
     logs = read_like_log()
 
@@ -64,7 +89,9 @@ def get_stats():
             pass
 
     return {
-        'token_count': len(tokens),
+        'token_count': len(tokens),           # acc bot (access.txt)
+        'token_real_count': len(real_tokens), # acc thật (access_real.txt)
+        'token_total': len(tokens) + len(real_tokens),
         'proxy_count': len(proxies),
         'total_runs': total_runs,
         'total_ok': total_ok,
@@ -79,10 +106,17 @@ def run_like_bot(uid_list, region, num_threads, max_tokens, log_q):
         log_q.put(f"[ERROR] Không import được like.py: {e}")
         return
 
-    tokens = read_tokens()
+    bot_tokens = read_tokens()
+    real_tokens = read_real_tokens()
+    tokens = read_all_tokens()
+
     if not tokens:
-        log_q.put("[ERROR] access.txt rỗng hoặc không tồn tại. Hãy tạo token trước!")
+        log_q.put("[ERROR] Không có token nào! Tạo token bot hoặc lấy token acc thật trước.")
         return
+
+    log_q.put(f"[*] Token acc thật (MITM): {len(real_tokens)}")
+    log_q.put(f"[*] Token acc bot (reg.py): {len(bot_tokens)}")
+    log_q.put(f"[*] Tổng cộng sử dụng: {len(tokens)} token")
 
     if max_tokens and max_tokens > 0:
         tokens = tokens[:max_tokens]
@@ -94,7 +128,6 @@ def run_like_bot(uid_list, region, num_threads, max_tokens, log_q):
             p = f'http://{p}'
         proxies_list.append({'http': p, 'https': p})
 
-    log_q.put(f"[*] Đã tải {len(tokens)} token")
     if proxies_list:
         log_q.put(f"[*] Sử dụng {len(proxies_list)} proxy (rotation)")
     else:
@@ -237,15 +270,27 @@ def run_token_checker(num_threads, log_q):
     log_q.put("[*] Bắt đầu kiểm tra token...")
     log_q.put("=" * 50)
 
-    tokens = read_tokens()
-    if not tokens:
-        log_q.put("[ERROR] access.txt rỗng hoặc không tồn tại!")
+    bot_tokens = read_tokens()
+    real_tokens = read_real_tokens()
+    all_tokens = read_all_tokens()
+
+    if not all_tokens:
+        log_q.put("[ERROR] Không có token nào trong cả 2 file!")
         return
 
-    log_q.put(f"[*] Tổng số token cần kiểm tra: {len(tokens)}")
+    log_q.put(f"[*] 🤖 Token acc bot  (access.txt)      : {len(bot_tokens)}")
+    log_q.put(f"[*] 👤 Token acc thật (access_real.txt) : {len(real_tokens)}")
+    log_q.put(f"[*] Tổng kiểm tra: {len(all_tokens)} token")
+    log_q.put("=" * 50)
 
-    live_tokens = []
-    dead_tokens = []
+    # Tập hợp để phân loại nhanh nguồn gốc token
+    bot_set = set(bot_tokens)
+    real_set = set(real_tokens)
+
+    live_bot = []
+    dead_bot = []
+    live_real = []
+    dead_real = []
     lock = threading.Lock()
 
     def decode_jwt(token):
@@ -260,6 +305,9 @@ def run_token_checker(num_threads, log_q):
 
     def check_one(idx, token):
         token = token.strip()
+        is_real = token in real_set
+        label = "👤" if is_real else "🤖"
+
         payload = decode_jwt(token)
         uid = "UNKNOWN"
         if payload:
@@ -267,8 +315,8 @@ def run_token_checker(num_threads, log_q):
             exp = payload.get("exp")
             if exp and datetime.now().timestamp() > exp:
                 with lock:
-                    dead_tokens.append(token)
-                log_q.put(f"[{idx:04d}] ⚠️  UID {uid} → HẾT HẠN (local check)")
+                    (dead_real if is_real else dead_bot).append(token)
+                log_q.put(f"[{idx:04d}] {label} ⚠️  UID {uid} → HẾT HẠN")
                 return
 
         headers = {
@@ -285,14 +333,14 @@ def run_token_checker(num_threads, log_q):
 
         with lock:
             if is_live:
-                live_tokens.append(token)
-                log_q.put(f"[{idx:04d}] ✅ UID {uid} → CÒN SỐNG")
+                (live_real if is_real else live_bot).append(token)
+                log_q.put(f"[{idx:04d}] {label} ✅ UID {uid} → CÒN SỐNG")
             else:
-                dead_tokens.append(token)
-                log_q.put(f"[{idx:04d}] ❌ UID {uid} → ĐÃ CHẾT")
+                (dead_real if is_real else dead_bot).append(token)
+                log_q.put(f"[{idx:04d}] {label} ❌ UID {uid} → ĐÃ CHẾT")
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = [executor.submit(check_one, i + 1, t) for i, t in enumerate(tokens)]
+        futures = [executor.submit(check_one, i + 1, t) for i, t in enumerate(all_tokens)]
         for future in futures:
             try:
                 future.result()
@@ -300,18 +348,20 @@ def run_token_checker(num_threads, log_q):
                 pass
 
     _ensure_data_dir()
-    live_file = os.path.join(DATA_DIR, 'access_live.txt')
-    dead_file = os.path.join(DATA_DIR, 'access_die.txt')
 
-    with open(live_file, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(live_tokens) + ('\n' if live_tokens else ''))
-    with open(dead_file, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(dead_tokens) + ('\n' if dead_tokens else ''))
-
+    # Ghi riêng từng file — chỉ giữ token sống
     with open(os.path.join(DATA_DIR, 'access.txt'), 'w', encoding='utf-8') as f:
-        f.write('\n'.join(live_tokens) + ('\n' if live_tokens else ''))
+        f.write('\n'.join(live_bot) + ('\n' if live_bot else ''))
+
+    with open(os.path.join(DATA_DIR, 'access_real.txt'), 'w', encoding='utf-8') as f:
+        f.write('\n'.join(live_real) + ('\n' if live_real else ''))
+
+    # File tổng hợp backup
+    with open(os.path.join(DATA_DIR, 'access_die.txt'), 'w', encoding='utf-8') as f:
+        f.write('\n'.join(dead_bot + dead_real) + ('\n' if (dead_bot or dead_real) else ''))
 
     log_q.put("\n" + "=" * 50)
-    log_q.put(f"✅ Token còn sống : {len(live_tokens)}")
-    log_q.put(f"❌ Token đã chết  : {len(dead_tokens)}")
-    log_q.put(f"🔄 Đã cập nhật access.txt (chỉ giữ token sống)")
+    log_q.put(f"🤖 Bot token  → Sống: {len(live_bot)} | Chết: {len(dead_bot)}")
+    log_q.put(f"👤 Real token → Sống: {len(live_real)} | Chết: {len(dead_real)}")
+    log_q.put(f"✅ Tổng còn sống: {len(live_bot) + len(live_real)}")
+    log_q.put(f"🔄 Đã cập nhật access.txt và access_real.txt (chỉ giữ token sống)")

@@ -35,19 +35,28 @@
   <!-- KIỂM TRA TOKEN -->
   <div class="card">
     <div class="card-header"><h3>🔍 Kiểm tra Token</h3></div>
-    <div style="background:var(--bg4);border-radius:6px;padding:14px;margin-bottom:16px;text-align:center;">
-      <div style="font-size:2.2rem;font-weight:bold;color:var(--red);" id="token-count">{{ token_count }}</div>
-      <div style="font-size:0.8rem;color:var(--text-dim);margin-top:4px;">Token trong access.txt</div>
+
+    <!-- Thống kê 2 nguồn -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div style="background:var(--bg4);border-radius:6px;padding:12px;text-align:center;">
+        <div style="font-size:2rem;font-weight:bold;color:var(--red);" id="token-count">{{ token_count }}</div>
+        <div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;">🤖 Bot (access.txt)</div>
+      </div>
+      <div style="background:var(--bg4);border-radius:6px;padding:12px;text-align:center;">
+        <div style="font-size:2rem;font-weight:bold;color:#00ccff;" id="token-real-count">{{ token_real_count }}</div>
+        <div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;">👤 Thật (access_real.txt)</div>
+      </div>
     </div>
+
     <div class="form-group">
       <label>Số luồng kiểm tra</label>
       <input type="number" id="chk-threads" value="10" min="1" max="30">
     </div>
     <button class="btn btn-success" id="btn-chk" onclick="startCheck()" style="width:100%;">
-      🔍 Kiểm tra & Lọc token
+      🔍 Kiểm tra & Lọc token (cả 2 file)
     </button>
     <p style="color:var(--text-dim);font-size:0.78rem;margin-top:8px;">
-      Token hết hạn/chết sẽ tự động bị xoá khỏi access.txt
+      Token chết sẽ bị xoá khỏi từng file tương ứng
     </p>
   </div>
 </div>
@@ -129,7 +138,8 @@ async function startCheck() {
 async function refreshCount() {
   const r = await fetch('/api/stats');
   const d = await r.json();
-  document.getElementById('token-count').textContent = d.token_count;
+  document.getElementById('token-count').textContent      = d.token_count;
+  document.getElementById('token-real-count').textContent = d.token_real_count;
 }
 
 function appendLog(text) {

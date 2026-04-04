@@ -89,7 +89,7 @@
             🖥️ <span style="color:var(--yellow)">mitmproxy</span> (chạy trên server này)<br>
             &nbsp;&nbsp;│ ← chặn response /MajorLogin<br>
             &nbsp;&nbsp;│ ← trích xuất JWT Token<br>
-            &nbsp;&nbsp;│ ← lưu vào access.txt<br>
+            &nbsp;&nbsp;│ ← lưu vào access_real.txt<br>
             &nbsp;&nbsp;▼<br>
             🌐 Server Garena / Free Fire
           </div>
@@ -175,7 +175,7 @@ mitmdump -s auto_extract_mitm.py --listen-port 8080</div>
             <div style="color:var(--text-dim);font-size:0.81rem;margin-top:4px;">
               Terminal sẽ hiển thị token và lưu vào:
             </div>
-            <div class="cmd">tools/bot/data/access.txt</div>
+            <div class="cmd">tools/bot/data/access_real.txt</div>
             <div class="success-box" style="margin-top:6px;">
               ✅ Sau khi lưu xong → dùng bình thường cho Buff Like
             </div>
@@ -342,7 +342,7 @@ mitmdump -s dump.py --listen-port 8080</div>
           <div>Mod Skin: <span style="color:var(--green)">mitm_scripts/dump.py</span></div>
           <div>Lấy Token: <span style="color:var(--green)">mitm_scripts/auto_extract_mitm.py</span></div>
           <div>ID file: <span style="color:var(--green)">mitm_scripts/extracted_ids.txt</span></div>
-          <div>Token lưu: <span style="color:var(--green)">bot/data/access.txt</span></div>
+          <div>Token lưu: <span style="color:var(--green)">bot/data/access_real.txt</span></div>
         </div>
       </div>
 
