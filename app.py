@@ -214,6 +214,7 @@ def api_tokens_web_login():
     session_key = (data.get('session_key') or '').strip()
     open_id = (data.get('open_id') or '').strip()
     region = (data.get('region') or 'VN').upper()
+    direct = bool(data.get('direct', False))
 
     if not session_key or not open_id:
         return jsonify({'error': 'Thiếu session_key hoặc open_id'}), 400
@@ -226,7 +227,7 @@ def api_tokens_web_login():
     from web_token_login import run_web_login
 
     def _run():
-        run_web_login(session_key, open_id, region, DATA_DIR, log_q)
+        run_web_login(session_key, open_id, region, DATA_DIR, log_q, direct=direct)
         log_q.put('[DONE]')
 
     threading.Thread(target=_run, daemon=True).start()

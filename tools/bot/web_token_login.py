@@ -227,7 +227,7 @@ def major_login(access_token: str, open_id: str, region: str = "VN",
 
 # ── Hàm chính: Chạy toàn bộ luồng ──────────────────────────
 def run_web_login(session_key: str, open_id: str, region: str,
-                  data_dir: str, log_q=None) -> bool:
+                  data_dir: str, log_q=None, direct: bool = False) -> bool:
     """
     Toàn bộ flow: session_key + open_id → Garena token → JWT → lưu file
     """
@@ -241,15 +241,19 @@ def run_web_login(session_key: str, open_id: str, region: str,
     log(f"[*] Region  : {region}")
     log("=" * 50)
 
-    # Bước 1: Lấy Garena access_token từ session_key
-    log("\n[Bước 1] Đổi session_key → Garena access_token...")
-    garena_data = get_garena_token(session_key, open_id, log_q)
-
-    if not garena_data:
-        log("\n[!] Thử phương án 2: dùng session_key trực tiếp làm access_token...")
+    # Bước 1: Lấy Garena access_token
+    if direct:
+        log("\n[Bước 1] Dùng access_token trực tiếp (bỏ qua bước đổi session_key)...")
         access_token = session_key
     else:
-        access_token = garena_data.get("access_token", session_key)
+        log("\n[Bước 1] Đổi session_key → Garena access_token...")
+        garena_data = get_garena_token(session_key, open_id, log_q)
+
+        if not garena_data:
+            log("\n[!] Exchange thất bại → thử dùng session_key trực tiếp làm access_token...")
+            access_token = session_key
+        else:
+            access_token = garena_data.get("access_token", session_key)
 
     # Bước 2: Gọi MajorLogin
     log(f"\n[Bước 2] Gọi MajorLogin Free Fire (region={region})...")
