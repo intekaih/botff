@@ -1,68 +1,377 @@
 {% extends "base.html" %}
 {% block title %}MITM Mod{% endblock %}
-{% block topbar_title %}MITM Mod — Quản lý Skin/Emote{% endblock %}
+{% block topbar_title %}MITM Mod — Hướng dẫn & Quản lý{% endblock %}
 {% block breadcrumb %}MITM Mod{% endblock %}
 
 {% block content %}
-<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;">
 
-  <div class="card">
-    <div class="card-header"><h3>🎨 Danh sách ID Skin/Emote (extracted_ids.txt)</h3></div>
-    <div class="alert alert-success" id="alert-ok"></div>
-    <div class="alert alert-error" id="alert-err"></div>
-    <div class="form-group">
-      <label>Nhập ID item muốn inject (mỗi dòng một ID)</label>
-      <textarea id="ids-content" style="height:420px;font-size:0.82rem;" placeholder="Nhập ID skin/emote tại đây, mỗi dòng một ID...">{{ content }}</textarea>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;">
-      <button class="btn btn-primary" onclick="saveIds()">💾 Lưu danh sách ID</button>
-      <button class="btn btn-secondary" onclick="clearAll()">🗑 Xoá tất cả</button>
-      <span id="count-badge" class="pill pill-yellow" style="margin-left:auto;">{{ content.split('\n') | selectattr('length') | list | length }} IDs</span>
-    </div>
-  </div>
+<!-- TAB BAR -->
+<div style="display:flex;gap:0;margin-bottom:20px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px;">
+  <button onclick="switchTab('tab-extract')" id="btn-extract" class="tab-btn tab-active">
+    🔑 Lấy Token Acc Thật
+  </button>
+  <button onclick="switchTab('tab-mod')" id="btn-mod" class="tab-btn">
+    🎨 Mod Skin / Emote
+  </button>
+  <button onclick="switchTab('tab-ids')" id="btn-ids" class="tab-btn">
+    📋 Quản lý ID Skin
+  </button>
+</div>
 
-  <div>
-    <div class="card">
-      <div class="card-header"><h3>⚙️ Cách sử dụng MITM</h3></div>
-      <div style="color:var(--text-dim);font-size:0.82rem;line-height:1.9;">
-        <div style="color:var(--red);font-weight:bold;margin-bottom:8px;">Yêu cầu thêm:</div>
-        <div style="background:var(--bg4);border-radius:4px;padding:10px;font-family:monospace;color:var(--green);font-size:0.78rem;line-height:1.8;margin-bottom:12px;">
-          pip install mitmproxy blackboxprotobuf
+<style>
+.tab-btn {
+  flex: 1; padding: 10px 16px; background: transparent; border: none;
+  color: var(--text-dim); font-family: 'Courier New', monospace; font-size: 0.85rem;
+  cursor: pointer; border-radius: 5px; transition: all 0.15s;
+}
+.tab-btn:hover { color: var(--text); background: var(--bg3); }
+.tab-active { background: var(--red) !important; color: white !important; }
+.tab-content { display: none; }
+.tab-content.show { display: block; }
+
+.step-box {
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: 6px; padding: 14px 16px; margin: 10px 0;
+  font-size: 0.83rem; line-height: 1.9;
+}
+.step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; background: var(--red); color: white;
+  border-radius: 50%; font-size: 0.75rem; font-weight: bold;
+  margin-right: 8px; flex-shrink: 0;
+}
+.step-row { display: flex; align-items: flex-start; margin-bottom: 14px; }
+.step-row:last-child { margin-bottom: 0; }
+.cmd {
+  background: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 4px;
+  padding: 8px 12px; font-family: 'Courier New', monospace;
+  color: #99ff99; font-size: 0.82rem; margin: 6px 0;
+  white-space: pre;
+}
+.warn-box {
+  background: rgba(255,170,0,0.08); border: 1px solid rgba(255,170,0,0.3);
+  border-radius: 6px; padding: 12px 14px; margin: 12px 0;
+  color: var(--yellow); font-size: 0.82rem; line-height: 1.8;
+}
+.info-box {
+  background: rgba(51,153,255,0.08); border: 1px solid rgba(51,153,255,0.3);
+  border-radius: 6px; padding: 12px 14px; margin: 12px 0;
+  color: #66aaff; font-size: 0.82rem; line-height: 1.8;
+}
+.success-box {
+  background: rgba(51,204,102,0.08); border: 1px solid rgba(51,204,102,0.3);
+  border-radius: 6px; padding: 12px 14px; margin: 12px 0;
+  color: var(--green); font-size: 0.82rem; line-height: 1.8;
+}
+</style>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB 1: LẤY TOKEN ACC THẬT                                -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="tab-extract" class="tab-content show">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <!-- CỘT TRÁI: Nguyên lý + Điều kiện -->
+    <div>
+      <div class="card">
+        <div class="card-header"><span>🧠</span><h3>Cách hoạt động</h3></div>
+        <div style="font-size:0.83rem;color:var(--text-dim);line-height:1.9;">
+          <p style="color:var(--text);margin-bottom:10px;">
+            Script <strong style="color:var(--green)">auto_extract_mitm.py</strong> đóng vai trò như một proxy
+            ngồi giữa điện thoại và server Garena. Khi game gửi request đăng nhập, proxy chặn
+            response và tự động trích xuất JWT Token.
+          </p>
+
+          <div style="background:var(--bg4);border-radius:6px;padding:14px;margin:12px 0;font-size:0.81rem;font-family:'Courier New',monospace;line-height:2;">
+            📱 Điện thoại<br>
+            &nbsp;&nbsp;│ (Wi-Fi → đặt SOCKS/HTTP proxy)<br>
+            &nbsp;&nbsp;▼<br>
+            🖥️ <span style="color:var(--yellow)">mitmproxy</span> (chạy trên server này)<br>
+            &nbsp;&nbsp;│ ← chặn response /MajorLogin<br>
+            &nbsp;&nbsp;│ ← trích xuất JWT Token<br>
+            &nbsp;&nbsp;│ ← lưu vào access.txt<br>
+            &nbsp;&nbsp;▼<br>
+            🌐 Server Garena / Free Fire
+          </div>
+
+          <div class="warn-box">
+            ⚠️ <strong>Bắt buộc:</strong> Điện thoại phải kết nối proxy <strong>TRƯỚC KHI</strong> mở Free Fire và đăng nhập.
+            Nếu đăng nhập xong rồi mới bật proxy → sẽ không capture được.
+          </div>
+
+          <div class="info-box">
+            ℹ️ Script này intercept endpoint <code>/MajorLogin</code> của Garena — đây chính là nơi
+            server trả về JWT Token sau khi xác thực Google/Facebook/Guest thành công.
+          </div>
         </div>
-        <div style="color:var(--text);font-weight:bold;margin-bottom:8px;">Bước 1 — Chạy dump.py:</div>
-        <div style="background:var(--bg4);border-radius:4px;padding:10px;font-family:monospace;color:var(--green);font-size:0.78rem;margin-bottom:12px;">
-          cd tools/mitm_scripts<br>mitmproxy -s dump.py
-        </div>
-        <div style="color:var(--text);font-weight:bold;margin-bottom:8px;">Bước 2 — Chạy ipal.py (giả mạo VIP):</div>
-        <div style="background:var(--bg4);border-radius:4px;padding:10px;font-family:monospace;color:var(--green);font-size:0.78rem;margin-bottom:12px;">
-          cd mods/Xmodz/Xmodz<br>python ipal.py
-        </div>
-        <div style="background:rgba(255,170,0,0.1);border:1px solid rgba(255,170,0,0.3);border-radius:4px;padding:10px;margin-top:8px;color:var(--yellow);font-size:0.8rem;">
-          ⚠️ MITM chỉ hiển thị skin phía client của bạn, không ảnh hưởng account thật.
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span>📋</span><h3>Yêu cầu</h3></div>
+        <div style="font-size:0.83rem;line-height:2;color:var(--text-dim);">
+          <div>✅ mitmproxy &amp; blackboxprotobuf <span style="color:var(--green)">(đã cài)</span></div>
+          <div>✅ Điện thoại và server <strong>cùng mạng</strong> hoặc server có IP public</div>
+          <div>✅ Cài <strong>CA Certificate của mitmproxy</strong> lên điện thoại</div>
+          <div>✅ Free Fire <strong>chưa chạy / chưa đăng nhập</strong> khi bật proxy</div>
+          <div>⚠️ Android 7+ cần root hoặc dùng apk patch để bypass SSL Pinning của FF</div>
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-header"><h3>📁 File MITM</h3></div>
-      <div style="font-size:0.82rem;line-height:2;color:var(--text-dim);">
-        <div>Script chính: <span style="color:var(--green);">tools/mitm_scripts/dump.py</span></div>
-        <div>Auto extract: <span style="color:var(--green);">tools/mitm_scripts/auto_extract_mitm.py</span></div>
-        <div>Giả mạo VIP: <span style="color:var(--green);">mods/Xmodz/Xmodz/ipal.py</span></div>
-        <div>ID list: <span style="color:var(--green);">tools/mitm_scripts/extracted_ids.txt</span></div>
+    <!-- CỘT PHẢI: Hướng dẫn từng bước -->
+    <div>
+      <div class="card">
+        <div class="card-header"><span>📖</span><h3>Hướng dẫn từng bước</h3></div>
+
+        <div class="step-row">
+          <span class="step-num">1</span>
+          <div>
+            <strong style="color:var(--text)">Khởi động mitmproxy trên server</strong>
+            <div style="color:var(--text-dim);font-size:0.81rem;margin-top:4px;">Chạy lệnh sau trong terminal:</div>
+            <div class="cmd">cd tools/mitm_scripts
+mitmdump -s auto_extract_mitm.py --listen-port 8080</div>
+            <div style="color:var(--text-dim);font-size:0.8rem;">mitmproxy sẽ lắng nghe ở port 8080</div>
+          </div>
+        </div>
+
+        <div class="step-row">
+          <span class="step-num">2</span>
+          <div>
+            <strong style="color:var(--text)">Cài đặt proxy trên điện thoại</strong>
+            <div style="color:var(--text-dim);font-size:0.81rem;margin:4px 0;">Vào <em>Cài đặt Wi-Fi → Sửa mạng → Proxy thủ công:</em></div>
+            <div class="step-box" style="padding:10px 12px;">
+              <div>Loại:&nbsp; <span style="color:var(--yellow)">HTTP</span></div>
+              <div>Host:&nbsp; <span style="color:var(--green)">[IP server hoặc IP máy tính]</span></div>
+              <div>Port:&nbsp; <span style="color:var(--green)">8080</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-row">
+          <span class="step-num">3</span>
+          <div>
+            <strong style="color:var(--text)">Cài CA Certificate (QUAN TRỌNG)</strong>
+            <div style="color:var(--text-dim);font-size:0.81rem;margin-top:4px;">Mở trình duyệt trên điện thoại → truy cập:</div>
+            <div class="cmd">http://mitm.it</div>
+            <div style="color:var(--text-dim);font-size:0.8rem;">Tải và cài certificate → <em>Cài đặt → Bảo mật → Chứng chỉ</em></div>
+          </div>
+        </div>
+
+        <div class="step-row">
+          <span class="step-num">4</span>
+          <div>
+            <strong style="color:var(--text)">Mở Free Fire → Đăng nhập</strong>
+            <div style="color:var(--text-dim);font-size:0.81rem;margin-top:4px;">
+              Chọn đăng nhập bằng Google / Facebook / Garena.<br>
+              <strong style="color:var(--yellow)">Proxy phải bật TRƯỚC khi đăng nhập!</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-row">
+          <span class="step-num">5</span>
+          <div>
+            <strong style="color:var(--text)">Token được tự động lưu</strong>
+            <div style="color:var(--text-dim);font-size:0.81rem;margin-top:4px;">
+              Terminal sẽ hiển thị token và lưu vào:
+            </div>
+            <div class="cmd">tools/bot/data/access.txt</div>
+            <div class="success-box" style="margin-top:6px;">
+              ✅ Sau khi lưu xong → dùng bình thường cho Buff Like
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
+</div>
 
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB 2: MOD SKIN / EMOTE                                  -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="tab-mod" class="tab-content">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <div>
+      <div class="card">
+        <div class="card-header"><span>🎮</span><h3>dump.py — Mod Skin Realtime</h3></div>
+        <div style="font-size:0.83rem;color:var(--text-dim);line-height:1.9;">
+          <p style="color:var(--text);margin-bottom:10px;">
+            Script <strong style="color:var(--green)">dump.py</strong> can thiệp vào response game
+            để inject skin, emote vào client. Chỉ thấy ở <strong>phía bạn</strong>,
+            không ảnh hưởng server hay người khác.
+          </p>
+
+          <table style="width:100%;font-size:0.8rem;border-collapse:collapse;">
+            <tr style="border-bottom:1px solid var(--border);">
+              <th style="text-align:left;padding:6px 0;color:var(--text-dim);">Tính năng</th>
+              <th style="text-align:left;padding:6px;color:var(--text-dim);">Endpoint bị chặn</th>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:6px 0;color:var(--green);">💎 VIP Bypass</td>
+              <td style="padding:6px;color:var(--yellow);">GetPrimeAccountInfo</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:6px 0;color:var(--green);">🎒 Backpack đầy đồ</td>
+              <td style="padding:6px;color:var(--yellow);">GetBackpack</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:6px 0;color:var(--green);">💃 Emote tất cả</td>
+              <td style="padding:6px;color:var(--yellow);">ChooseEmote</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:6px 0;color:var(--green);">🔫 Skin súng trong trận</td>
+              <td style="padding:6px;color:var(--yellow);">ChooseSlotsAndShow</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;color:var(--green);">👗 Skin nhân vật trong trận</td>
+              <td style="padding:6px;color:var(--yellow);">GetPlayerPersonalShow</td>
+            </tr>
+          </table>
+
+          <div class="warn-box" style="margin-top:14px;">
+            ⚠️ Cũng cần kết nối proxy + cài CA cert trước. Giống hệt bước 1-3 của tab "Lấy Token".
+            Sau khi kết nối proxy → mở game → vào loby → skin sẽ hiển thị.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-header"><span>📖</span><h3>Hướng dẫn chạy Mod</h3></div>
+
+        <div class="step-row">
+          <span class="step-num">1</span>
+          <div>
+            <strong style="color:var(--text)">Thêm ID skin vào tab "Quản lý ID"</strong>
+            <div style="color:var(--text-dim);font-size:0.81rem;margin-top:4px;">
+              ID skin quần áo (bất kỳ số), ID skin súng phải bắt đầu bằng <code style="color:var(--yellow)">907</code>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-row">
+          <span class="step-num">2</span>
+          <div>
+            <strong style="color:var(--text)">Chạy dump.py qua mitmdump</strong>
+            <div class="cmd">cd tools/mitm_scripts
+mitmdump -s dump.py --listen-port 8080</div>
+          </div>
+        </div>
+
+        <div class="step-row">
+          <span class="step-num">3</span>
+          <div>
+            <strong style="color:var(--text)">Kết nối điện thoại vào proxy</strong>
+            <div style="color:var(--text-dim);font-size:0.81rem;margin-top:4px;">
+              Cùng quy trình như tab Lấy Token (bước 2-3). CA cert chỉ cần cài 1 lần.
+            </div>
+          </div>
+        </div>
+
+        <div class="step-row">
+          <span class="step-num">4</span>
+          <div>
+            <strong style="color:var(--text)">Mở game → Skin xuất hiện tự động</strong>
+            <div style="color:var(--text-dim);font-size:0.81rem;margin-top:4px;">
+              Vào lobby → kho đồ → mặc đồ từ backpack. Trong trận skin sẽ render.
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:0;background:var(--bg4);">
+          <div style="font-size:0.82rem;color:var(--text-dim);">
+            <p style="color:var(--yellow);font-weight:bold;margin-bottom:8px;">📁 File tĩnh đi kèm dump.py:</p>
+            <div style="line-height:2;">
+              <div><span style="color:var(--green)">ChooseSlotsAndShow</span> — Fake response chọn slot súng</div>
+              <div><span style="color:var(--green)">ChooseEmote</span> — Fake response chọn emote</div>
+              <div><span style="color:var(--green)">ChangeClothes</span> — Fake response thay đồ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB 3: QUẢN LÝ ID SKIN                                   -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="tab-ids" class="tab-content">
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;">
+
+    <div class="card">
+      <div class="card-header">
+        <h3>📋 Danh sách ID Skin/Emote (extracted_ids.txt)</h3>
+        <span id="count-badge" class="badge" style="background:var(--bg4);color:var(--text);">
+          {{ content.split('\n') | selectattr('length') | list | length }} IDs
+        </span>
+      </div>
+      <div id="alert-ok" class="alert alert-success"></div>
+      <div id="alert-err" class="alert alert-error"></div>
+      <div class="form-group">
+        <label>Nhập ID item muốn inject — mỗi dòng một ID hoặc cách nhau bằng dấu phẩy</label>
+        <textarea id="ids-content" style="height:380px;font-size:0.82rem;"
+          placeholder="Ví dụ:&#10;211002030&#10;211003010&#10;907001401&#10;909000125">{{ content }}</textarea>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveIds()">💾 Lưu danh sách ID</button>
+        <button class="btn btn-secondary" onclick="clearAll()">🗑 Xoá tất cả</button>
+        <button class="btn btn-secondary" onclick="formatIds()">🔧 Chuẩn hóa định dạng</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-header"><span>📌</span><h3>Ghi chú prefix ID</h3></div>
+        <div style="font-size:0.82rem;color:var(--text-dim);line-height:2.1;">
+          <div><span style="color:var(--green);font-family:monospace;">211XXXXXX</span> — Quần áo nhân vật</div>
+          <div><span style="color:var(--green);font-family:monospace;">907XXXXXX</span> — Skin súng (trong trận)</div>
+          <div><span style="color:var(--green);font-family:monospace;">909XXXXXX</span> — Emote</div>
+          <div><span style="color:var(--green);font-family:monospace;">201XXXXXX</span> — Skin nhân vật đặc biệt</div>
+          <div><span style="color:var(--green);font-family:monospace;">8XXXXXXXX</span> — Pet skin</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span>⚙️</span><h3>File liên quan</h3></div>
+        <div style="font-size:0.81rem;line-height:2;color:var(--text-dim);">
+          <div>Mod Skin: <span style="color:var(--green)">mitm_scripts/dump.py</span></div>
+          <div>Lấy Token: <span style="color:var(--green)">mitm_scripts/auto_extract_mitm.py</span></div>
+          <div>ID file: <span style="color:var(--green)">mitm_scripts/extracted_ids.txt</span></div>
+          <div>Token lưu: <span style="color:var(--green)">bot/data/access.txt</span></div>
+        </div>
+      </div>
+
+      <div class="card" style="background:rgba(255,51,0,0.05);border-color:rgba(255,51,0,0.2);">
+        <div style="font-size:0.81rem;color:var(--text-dim);line-height:1.8;">
+          <p style="color:var(--red);font-weight:bold;margin-bottom:6px;">⚠ Lưu ý quan trọng</p>
+          <p>Skin/emote chỉ hiển thị <strong style="color:var(--text)">phía bạn (client-side)</strong>.
+          Người chơi khác vẫn thấy outfit thật của bạn.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('show'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+  document.getElementById(tabId).classList.add('show');
+  const btnMap = { 'tab-extract': 'btn-extract', 'tab-mod': 'btn-mod', 'tab-ids': 'btn-ids' };
+  document.getElementById(btnMap[tabId]).classList.add('tab-active');
+}
+
 async function saveIds() {
-  const content = document.getElementById('ids-content').value;
+  let raw = document.getElementById('ids-content').value;
   const res = await fetch('/api/mitm/save', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({content})
+    body: JSON.stringify({content: raw})
   });
   const d = await res.json();
   if (d.success) {
@@ -78,16 +387,26 @@ function clearAll() {
   document.getElementById('count-badge').textContent = '0 IDs';
 }
 
+function formatIds() {
+  const raw = document.getElementById('ids-content').value;
+  const ids = raw.split(/[\n,\s]+/).map(s => s.trim()).filter(s => /^\d+$/.test(s));
+  const unique = [...new Set(ids)];
+  document.getElementById('ids-content').value = unique.join('\n');
+  document.getElementById('count-badge').textContent = unique.length + ' IDs';
+  showAlert('ok', `🔧 Đã chuẩn hóa: ${unique.length} ID duy nhất`);
+}
+
 function showAlert(type, msg) {
   document.getElementById('alert-ok').classList.remove('show');
   document.getElementById('alert-err').classList.remove('show');
   const el = document.getElementById(type === 'ok' ? 'alert-ok' : 'alert-err');
-  el.textContent = msg; el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 3000);
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3500);
 }
 
 document.getElementById('ids-content').addEventListener('input', () => {
-  const lines = document.getElementById('ids-content').value.split('\n').filter(l => l.trim());
+  const lines = document.getElementById('ids-content').value.split(/[\n,\s]+/).filter(s => /^\d+$/.test(s.trim()));
   document.getElementById('count-badge').textContent = lines.length + ' IDs';
 });
 </script>

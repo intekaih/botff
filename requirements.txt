@@ -4,3 +4,6 @@ colorama
 protobuf-decoder
 flask
 gunicorn
+apscheduler
+mitmproxy
+blackboxprotobuf
