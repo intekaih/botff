@@ -1,0 +1,6 @@
+requests
+pycryptodome
+colorama
+protobuf-decoder
+flask
+gunicorn
