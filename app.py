@@ -306,19 +306,24 @@ def auth_google_callback():
     access_token = google_tokens.get('access_token', '')
 
     # Lấy thông tin user
-    userinfo = get_google_userinfo(access_token) if access_token else {}
-    email    = userinfo.get('email', 'unknown')
+    userinfo   = get_google_userinfo(access_token) if access_token else {}
+    email      = userinfo.get('email', 'unknown')
+    google_sub = userinfo.get('sub', '')
 
     task_id, log_q = _create_task()
 
     def _run():
         log_q.put(f"[*] Email Google: {email}")
+        log_q.put(f"[*] Google sub (user_id): {google_sub}")
         log_q.put(f"[*] Region: {region}")
-        log_q.put("\n[Bước 1] Đổi Google token → Garena access_token...")
+        log_q.put(f"[*] id_token length: {len(id_token)}")
 
-        # 2. Đổi Google token → Garena token (probe nhiều endpoints)
+        log_q.put("\n[Bước 1] Đổi Google token → Garena access_token...")
         garena_data = garena_google_exchange(
-            id_token, google_access_token=access_token, log_q=log_q
+            id_token,
+            google_access_token=access_token,
+            google_sub=google_sub,
+            log_q=log_q,
         )
 
         if not garena_data:
