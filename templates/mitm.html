@@ -79,7 +79,7 @@
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
       <div style="flex:1;min-width:220px;">
         <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.8;">
-          <div>Proxy host: <span style="color:var(--green);font-family:'Courier New',monospace;">botffkaih.replit.app</span></div>
+          <div>Proxy host: <span id="proxy-host-display" style="color:var(--green);font-family:'Courier New',monospace;">Đang tải...</span></div>
           <div>Proxy port: <span style="color:var(--green);font-family:'Courier New',monospace;">8080</span></div>
           <div>Loại: <span style="color:var(--yellow)">HTTP Proxy</span></div>
         </div>
@@ -168,7 +168,7 @@ mitmdump -s auto_extract_mitm.py --listen-port 8080</div>
             <div style="color:var(--text-dim);font-size:0.81rem;margin:4px 0;">Vào <em>Cài đặt Wi-Fi → Sửa mạng → Proxy thủ công:</em></div>
             <div class="step-box" style="padding:10px 12px;">
               <div>Loại:&nbsp; <span style="color:var(--yellow)">HTTP</span></div>
-              <div>Host:&nbsp; <span style="color:var(--green)">[IP server hoặc IP máy tính]</span></div>
+              <div>Host:&nbsp; <span id="proxy-host-display-2" style="color:var(--green)">[Đang tải IP...]</span></div>
               <div>Port:&nbsp; <span style="color:var(--green)">8080</span></div>
             </div>
           </div>
@@ -385,6 +385,14 @@ mitmdump -s dump.py --listen-port 8080</div>
 </div>
 
 <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const hostIP = window.location.hostname;
+  const h1 = document.getElementById("proxy-host-display");
+  const h2 = document.getElementById("proxy-host-display-2");
+  if (h1) h1.textContent = hostIP;
+  if (h2) h2.textContent = hostIP;
+});
+
 function switchTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('show'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
