@@ -316,11 +316,10 @@ def auth_google_callback():
         log_q.put(f"[*] Region: {region}")
         log_q.put("\n[Bước 1] Đổi Google token → Garena access_token...")
 
-        # 2. Đổi Google token → Garena token
-        garena_data = garena_google_exchange(id_token, "id_token", log_q)
-        if not garena_data and access_token:
-            log_q.put("[!] Thử lại với access_token...")
-            garena_data = garena_google_exchange(access_token, "access_token", log_q)
+        # 2. Đổi Google token → Garena token (probe nhiều endpoints)
+        garena_data = garena_google_exchange(
+            id_token, google_access_token=access_token, log_q=log_q
+        )
 
         if not garena_data:
             log_q.put("\n❌ Garena từ chối Google token. Xem log để biết chi tiết.")
