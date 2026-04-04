@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Kết quả Google Login{% endblock %}
+{% block content %}
+<div style="max-width:650px;margin:60px auto;text-align:center;">
+  <div class="card" style="border-color:{{ 'rgba(51,204,102,0.4)' if success else 'rgba(255,51,0,0.4)' }};">
+    {% if success %}
+      <div style="font-size:3rem;margin-bottom:12px;">✅</div>
+      <h2 style="color:var(--green);margin-bottom:8px;">Đăng nhập thành công!</h2>
+      <p style="color:var(--text-dim);margin-bottom:16px;">
+        Email: <strong style="color:var(--text);">{{ email }}</strong><br>
+        Đang xử lý lấy JWT Token Free Fire...
+      </p>
+
+      <div class="log-box" id="log-box" style="text-align:left;min-height:150px;margin-bottom:16px;">
+        Đang kết nối log...
+      </div>
+
+      <a href="/tokens" class="btn btn-secondary">← Về trang Token</a>
+
+      <script>
+      (function() {
+        const taskId = '{{ task_id }}';
+        const box = document.getElementById('log-box');
+        const es = new EventSource('/api/task/' + taskId + '/stream');
+        es.onmessage = function(e) {
+          if (e.data === '[DONE]') { es.close(); return; }
+          if (e.data === '[PING]') return;
+          box.textContent += e.data.replace(/<br>/g, '\n') + '\n';
+          box.scrollTop = box.scrollHeight;
+        };
+        es.onerror = function() { es.close(); };
+      })();
+      </script>
+
+    {% else %}
+      <div style="font-size:3rem;margin-bottom:12px;">❌</div>
+      <h2 style="color:var(--red);margin-bottom:8px;">Đăng nhập thất bại</h2>
+      <p style="color:var(--text-dim);margin-bottom:20px;">{{ msg }}</p>
+      <a href="/tokens" class="btn btn-primary">← Thử lại</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

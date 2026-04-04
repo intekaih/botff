@@ -203,6 +203,142 @@ def api_like_start():
     return jsonify({'task_id': task_id})
 
 
+_GOOGLE_CONFIG_FILE  = os.path.join(BASE_DIR, '.local', 'google_config.json')
+
+def _load_google_config():
+    cid  = os.environ.get('GOOGLE_CLIENT_ID', '')
+    csec = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+    if not cid and os.path.exists(_GOOGLE_CONFIG_FILE):
+        try:
+            cfg  = json.load(open(_GOOGLE_CONFIG_FILE))
+            cid  = cfg.get('client_id', '')
+            csec = cfg.get('client_secret', '')
+        except Exception:
+            pass
+    return cid, csec
+
+GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET = _load_google_config()
+
+_google_pending = {}   # state → {region, ts}
+
+def _google_redirect_uri():
+    return f"https://{request.host}/auth/google/callback"
+
+
+@app.route('/api/google/set_credentials', methods=['POST'])
+def api_google_set_credentials():
+    global GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+    data = request.json or {}
+    cid  = data.get('client_id', '').strip()
+    csec = data.get('client_secret', '').strip()
+    if not cid or not csec:
+        return jsonify({'ok': False, 'error': 'Thiếu client_id hoặc client_secret'})
+    os.makedirs(os.path.dirname(_GOOGLE_CONFIG_FILE), exist_ok=True)
+    with open(_GOOGLE_CONFIG_FILE, 'w') as f:
+        json.dump({'client_id': cid, 'client_secret': csec}, f)
+    os.environ['GOOGLE_CLIENT_ID']     = cid
+    os.environ['GOOGLE_CLIENT_SECRET'] = csec
+    GOOGLE_CLIENT_ID     = cid
+    GOOGLE_CLIENT_SECRET = csec
+    return jsonify({'ok': True})
+
+
+@app.route('/auth/google/start')
+def auth_google_start():
+    redir = _google_redirect_uri()
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        return render_template('google_setup.html', redirect_uri=redir), 200
+
+    region = request.args.get('region', 'VN').upper()
+    state  = str(uuid.uuid4())
+    _google_pending[state] = {'region': region, 'ts': time.time()}
+
+    sys.path.insert(0, os.path.join(BASE_DIR, 'tools', 'bot'))
+    from google_login import build_auth_url
+    url = build_auth_url(GOOGLE_CLIENT_ID, _google_redirect_uri(), state)
+    from flask import redirect as flask_redirect
+    return flask_redirect(url)
+
+
+@app.route('/auth/google/callback')
+def auth_google_callback():
+    from flask import redirect as flask_redirect
+    code  = request.args.get('code')
+    state = request.args.get('state', '')
+    error = request.args.get('error')
+
+    if error:
+        return render_template('google_result.html',
+                               success=False, msg=f"Google từ chối: {error}")
+
+    meta = _google_pending.pop(state, {})
+    region = meta.get('region', 'VN')
+
+    if not code:
+        return render_template('google_result.html',
+                               success=False, msg="Không nhận được authorization code")
+
+    _bot_dir = os.path.join(BASE_DIR, 'tools', 'bot')
+    if _bot_dir not in sys.path:
+        sys.path.insert(0, _bot_dir)
+    from google_login import exchange_code, garena_google_exchange, get_google_userinfo
+    from web_token_login import major_login
+
+    # 1. Đổi code → Google tokens
+    google_tokens = exchange_code(code, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
+                                  _google_redirect_uri())
+    if not google_tokens:
+        return render_template('google_result.html',
+                               success=False, msg="Không lấy được Google token")
+
+    id_token     = google_tokens.get('id_token', '')
+    access_token = google_tokens.get('access_token', '')
+
+    # Lấy thông tin user
+    userinfo = get_google_userinfo(access_token) if access_token else {}
+    email    = userinfo.get('email', 'unknown')
+
+    task_id, log_q = _create_task()
+
+    def _run():
+        log_q.put(f"[*] Email Google: {email}")
+        log_q.put(f"[*] Region: {region}")
+        log_q.put("\n[Bước 1] Đổi Google token → Garena access_token...")
+
+        # 2. Đổi Google token → Garena token
+        garena_data = garena_google_exchange(id_token, "id_token", log_q)
+        if not garena_data and access_token:
+            log_q.put("[!] Thử lại với access_token...")
+            garena_data = garena_google_exchange(access_token, "access_token", log_q)
+
+        if not garena_data:
+            log_q.put("\n❌ Garena từ chối Google token. Xem log để biết chi tiết.")
+            log_q.put('[DONE]')
+            return
+
+        ga_access = garena_data['access_token']
+        open_id   = garena_data['open_id']
+
+        # 3. MajorLogin → game JWT
+        log_q.put(f"\n[Bước 2] Gọi MajorLogin (region={region})...")
+        jwt = major_login(ga_access, open_id, region, log_q=log_q)
+
+        if jwt:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            with open(os.path.join(DATA_DIR, 'access_real.txt'), 'a') as f:
+                f.write(jwt + '\n')
+            log_q.put(f"\n✅ Đã lưu JWT vào access_real.txt")
+            log_q.put(f"📋 JWT: {jwt[:60]}...")
+        else:
+            log_q.put("\n❌ MajorLogin thất bại")
+
+        log_q.put('[DONE]')
+
+    threading.Thread(target=_run, daemon=True).start()
+    return render_template('google_result.html',
+                           success=True, task_id=task_id, email=email)
+
+
 @app.route('/api/bookmarklet')
 def api_bookmarklet():
     region = request.args.get('region', 'VN').upper()
@@ -236,7 +372,8 @@ def tokens_page():
         'tokens.html',
         token_count=len(tokens),
         token_real_count=len(real_tokens),
-        regions=list(REGION_URLS.keys())
+        regions=list(REGION_URLS.keys()),
+        google_ready=bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET),
     )
 
 

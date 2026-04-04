@@ -61,6 +61,84 @@
   </div>
 </div>
 
+<!-- GOOGLE LOGIN -->
+<div class="card" style="margin-bottom:20px;border-color:rgba(66,133,244,0.4);">
+  <div class="card-header" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <h3 style="color:#4285f4;display:flex;align-items:center;gap:8px;margin:0;">
+      <svg width="20" height="20" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Login bằng Google (không cần MITM)
+    </h3>
+    <span class="pill" style="background:rgba(66,133,244,0.15);color:#4285f4;border:1px solid rgba(66,133,244,0.3);">OAuth 2.0</span>
+    {% if google_ready %}
+    <span class="pill" style="background:rgba(51,204,102,0.15);color:#33cc66;border:1px solid rgba(51,204,102,0.3);">✅ Đã cấu hình</span>
+    {% else %}
+    <span class="pill" style="background:rgba(255,170,0,0.15);color:#ffaa00;border:1px solid rgba(255,170,0,0.3);">⚙️ Chưa cài đặt</span>
+    {% endif %}
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+    <!-- Thông tin -->
+    <div>
+      <div style="font-size:0.82rem;color:var(--text-dim);line-height:1.8;margin-bottom:14px;">
+        Đăng nhập trực tiếp bằng tài khoản Google của bạn.<br>
+        Luồng xử lý:
+        <div style="margin:8px 0 0 12px;font-size:0.78rem;">
+          <div>1️⃣ Click nút → cửa sổ Google mở ra</div>
+          <div>2️⃣ Chọn tài khoản Google → approve</div>
+          <div>3️⃣ Server tự đổi Google token → Garena token</div>
+          <div>4️⃣ Gọi MajorLogin → JWT lưu vào <code style="color:#99ff99;">access_real.txt</code></div>
+        </div>
+      </div>
+
+      {% if not google_ready %}
+      <div style="background:#1a1200;border:1px solid rgba(255,170,0,0.3);border-radius:6px;padding:10px 12px;font-size:0.8rem;color:#ffcc55;margin-bottom:12px;">
+        ⚠️ Cần cài đặt Google OAuth trước. Click nút bên phải để bắt đầu (miễn phí, ~5 phút).
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Nút login -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Region</label>
+        <select id="gg-region" style="width:100%;">
+          {% for r in regions %}
+          <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% if google_ready %}
+      <button class="btn btn-primary" onclick="startGoogleLogin()"
+              style="background:linear-gradient(135deg,#1a73e8,#4285f4);border-color:#4285f4;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Đăng nhập bằng Google
+      </button>
+      {% else %}
+      <a href="/auth/google/start" class="btn btn-secondary"
+         style="text-align:center;border-color:rgba(66,133,244,0.4);color:#4285f4;">
+        ⚙️ Cài đặt Google OAuth
+      </a>
+      {% endif %}
+
+      <button class="btn btn-secondary" onclick="window.location='/auth/google/start'"
+              style="font-size:0.78rem;padding:6px 12px;opacity:0.7;">
+        🔧 Cấu hình lại credentials
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- WEB LOGIN (KHÔNG CẦN ĐIỆN THOẠI) -->
 <div class="card" style="margin-bottom:20px;border-color:rgba(0,204,255,0.3);">
   <div class="card-header">
@@ -218,6 +296,11 @@ function startStream(task_id) {
     document.getElementById('log-badge').style.display = 'none';
     appendLog('[!] Stream bị gián đoạn.\n');
   };
+}
+
+function startGoogleLogin() {
+  const region = document.getElementById('gg-region').value;
+  window.location.href = '/auth/google/start?region=' + encodeURIComponent(region);
 }
 
 async function startGenerate() {
