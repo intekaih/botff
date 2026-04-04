@@ -339,10 +339,11 @@ def api_mitm_start():
         if mitm_process is not None and mitm_process.poll() is None:
             return jsonify({'success': False, 'msg': 'mitmproxy đang chạy rồi!'})
         try:
+            log_file = open(os.path.join(BASE_DIR, 'mitm.log'), 'a')
             mitm_process = subprocess.Popen(
                 ['mitmdump', '-s', MITM_SCRIPT, '--listen-port', '8080',
                  '--set', 'ssl_insecure=true', '--set', 'block_global=false'],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                stdout=log_file, stderr=subprocess.STDOUT,
                 cwd=os.path.join(BASE_DIR, 'tools', 'mitm_scripts')
             )
             return jsonify({'success': True, 'msg': 'mitmproxy đã khởi động (port 8080)'})
