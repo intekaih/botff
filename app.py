@@ -208,6 +208,31 @@ def tokens_page():
     )
 
 
+@app.route('/api/tokens/web_login', methods=['POST'])
+def api_tokens_web_login():
+    data = request.json or {}
+    session_key = (data.get('session_key') or '').strip()
+    open_id = (data.get('open_id') or '').strip()
+    region = (data.get('region') or 'VN').upper()
+
+    if not session_key or not open_id:
+        return jsonify({'error': 'Thiếu session_key hoặc open_id'}), 400
+
+    task_id, log_q = _create_task()
+
+    _bot_dir = os.path.join(BASE_DIR, 'tools', 'bot')
+    if _bot_dir not in sys.path:
+        sys.path.insert(0, _bot_dir)
+    from web_token_login import run_web_login
+
+    def _run():
+        run_web_login(session_key, open_id, region, DATA_DIR, log_q)
+        log_q.put('[DONE]')
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({'task_id': task_id})
+
+
 @app.route('/api/tokens/generate', methods=['POST'])
 def api_tokens_generate():
     data = request.json or {}

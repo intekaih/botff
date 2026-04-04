@@ -61,6 +61,50 @@
   </div>
 </div>
 
+<!-- WEB LOGIN (KHÔNG CẦN ĐIỆN THOẠI) -->
+<div class="card" style="margin-bottom:20px;border-color:rgba(0,204,255,0.3);">
+  <div class="card-header">
+    <h3 style="color:#00ccff;">🌐 Lấy Token Acc Thật qua Web (không cần điện thoại)</h3>
+    <span class="pill" style="background:rgba(0,204,255,0.15);color:#00ccff;border:1px solid rgba(0,204,255,0.3);">iOS / Android</span>
+  </div>
+
+  <!-- Hướng dẫn -->
+  <div style="background:var(--bg4);border-radius:6px;padding:14px;margin-bottom:16px;font-size:0.82rem;line-height:1.9;color:var(--text-dim);">
+    <div style="color:#00ccff;font-weight:bold;margin-bottom:8px;">📋 Hướng dẫn lấy Session Key + Open ID</div>
+    <div><span style="color:var(--red);font-weight:bold;">1.</span> Mở trình duyệt máy tính → vào <code style="color:#99ff99;background:#111;padding:1px 5px;border-radius:3px;">https://auth.garena.com</code></div>
+    <div><span style="color:var(--red);font-weight:bold;">2.</span> Đăng nhập bằng Google / Facebook / Garena</div>
+    <div><span style="color:var(--red);font-weight:bold;">3.</span> Nhấn <kbd style="background:#333;border:1px solid #555;border-radius:3px;padding:1px 4px;">F12</kbd> → tab <strong>Application</strong> → <strong>Cookies</strong> → <code style="color:#99ff99;background:#111;padding:1px 5px;border-radius:3px;">https://auth.garena.com</code></div>
+    <div><span style="color:var(--red);font-weight:bold;">4.</span> Tìm cookie <code style="color:#ffaa00;background:#111;padding:1px 5px;border-radius:3px;">session_key</code> → copy giá trị</div>
+    <div><span style="color:var(--red);font-weight:bold;">5.</span> Tìm cookie <code style="color:#ffaa00;background:#111;padding:1px 5px;border-radius:3px;">open_id</code> → copy giá trị</div>
+    <div><span style="color:var(--red);font-weight:bold;">6.</span> Dán vào ô bên dưới → bấm <strong style="color:#00ccff;">Lấy Token</strong></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+    <div class="form-group" style="margin:0;">
+      <label>Session Key (từ cookie auth.garena.com)</label>
+      <input type="text" id="web-session" placeholder="Dán session_key vào đây..." style="font-size:0.78rem;">
+    </div>
+    <div class="form-group" style="margin:0;">
+      <label>Open ID (Garena UID)</label>
+      <input type="text" id="web-openid" placeholder="Dán open_id vào đây...">
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end;">
+    <div class="form-group" style="margin:0;">
+      <label>Region</label>
+      <select id="web-region">
+        {% for r in regions %}
+        <option value="{{ r }}" {% if r == 'VN' %}selected{% endif %}>{{ r }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-primary" id="btn-web" onclick="startWebLogin()" style="white-space:nowrap;">
+      🌐 Lấy Token
+    </button>
+  </div>
+</div>
+
 <!-- LOG BOX -->
 <div class="card">
   <div class="card-header">
@@ -87,6 +131,8 @@ function startStream(task_id) {
       document.getElementById('btn-gen').innerHTML = '🔧 Tạo tài khoản & Token';
       document.getElementById('btn-chk').disabled = false;
       document.getElementById('btn-chk').innerHTML = '🔍 Kiểm tra & Lọc token';
+      document.getElementById('btn-web').disabled = false;
+      document.getElementById('btn-web').innerHTML = '🌐 Lấy Token';
       refreshCount();
       return;
     }
@@ -132,6 +178,36 @@ async function startCheck() {
     body: JSON.stringify({threads: parseInt(threads)})
   });
   const {task_id} = await res.json();
+  startStream(task_id);
+}
+
+async function startWebLogin() {
+  const session_key = document.getElementById('web-session').value.trim();
+  const open_id = document.getElementById('web-openid').value.trim();
+  const region = document.getElementById('web-region').value;
+
+  if (!session_key || !open_id) {
+    appendLog('[!] Vui lòng nhập đủ Session Key và Open ID\n');
+    return;
+  }
+
+  clearLog();
+  const btn = document.getElementById('btn-web');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Đang lấy...';
+
+  const res = await fetch('/api/tokens/web_login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({session_key, open_id, region})
+  });
+  const {task_id, error} = await res.json();
+  if (error) {
+    appendLog('[!] ' + error + '\n');
+    btn.disabled = false;
+    btn.innerHTML = '🌐 Lấy Token';
+    return;
+  }
   startStream(task_id);
 }
 
