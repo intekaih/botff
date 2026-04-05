@@ -638,7 +638,8 @@ def api_mitm_start():
             log_file = open(os.path.join(BASE_DIR, 'mitm.log'), 'a')
             mitm_process = subprocess.Popen(
                 ['mitmdump', '-s', MITM_SCRIPT, '-s', 'dump.py', '--listen-port', '8080',
-                 '--set', 'ssl_insecure=true', '--set', 'block_global=false'],
+                 '--set', 'ssl_insecure=true', '--set', 'block_global=false',
+                 '--allow-hosts', '.*(ggblueshark|ggbluefox|garena)\.com.*'],
                 stdout=log_file, stderr=subprocess.STDOUT,
                 cwd=os.path.join(BASE_DIR, 'tools', 'mitm_scripts')
             )
